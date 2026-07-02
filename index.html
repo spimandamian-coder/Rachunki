@@ -15,7 +15,7 @@
             <span style="color: #c62828;">Do zapłaty: <span id="totalUnpaid">0.00</span> zł</span>
         </div>
         
-        <div style="visibility: hidden; width: 100px;"></div> <!-- Bufor do wyśrodkowania na większych ekranach -->
+        <div style="visibility: hidden; width: 100px;"></div>
     </div>
 
     <!-- Dodawanie nowego rachunku -->
@@ -106,12 +106,12 @@
             rebuildGridStructure(); 
         });
 
-        // 2. Słuchaj zmian dla wybranego miesiąca
+        // 2. Słuchaj zmian dla wybranego miasta / miesiąca
         function listenToMonthData() {
             const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
             onValue(monthDataRef, (snapshot) => {
                 currentMonthData = snapshot.val() || {};
-                updateLiveValues(); 
+                rebuildGridStructure(); // Odbudowujemy strukturę, aby ukryć/pokazać usunięte karty
             });
         }
 
@@ -121,6 +121,12 @@
             
             globalRegisteredBills.forEach((name, index) => {
                 const billId = createBillId(name);
+                const billData = currentMonthData[billId] || { amount: '', paid: false };
+                
+                // NOWOŚĆ: Jeśli status to 'removed', ignorujemy ten rachunek w tym konkretnym miesiącu
+                if (billData.status === 'removed') {
+                    return; 
+                }
                 
                 const card = document.createElement('div');
                 card.className = `bill-card`;
@@ -147,7 +153,7 @@
                     </label>
                 `;
 
-                card.querySelector('.delete-btn').addEventListener('click', () => removeBill(name));
+                card.querySelector('.delete-btn').addEventListener('click', () => removeBillFromCurrentMonth(name));
                 card.querySelector('.amount-input').addEventListener('input', (e) => updateAmount(billId, e.target.value));
                 card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
                 card.querySelector('.name-input').addEventListener('change', (e) => updateBillName(index, name, e.target.value));
@@ -158,7 +164,7 @@
             updateLiveValues();
         }
 
-        // NOWA FUNKCJA: Przeliczanie sum podsumowania
+        // Przeliczanie sum podsumowania
         function calculateTotals() {
             let paidSum = 0;
             let unpaidSum = 0;
@@ -167,7 +173,9 @@
                 const billId = createBillId(name);
                 const billData = currentMonthData[billId] || { amount: 0, paid: false };
                 
-                // Konwersja tekstu z inputa na bezpieczną liczbę zmiennoprzecinkową
+                // Nie wliczamy do sumy rachunków oznaczonych jako usunięte w danym miesiącu
+                if (billData.status === 'removed') return;
+
                 const amount = parseFloat(billData.amount) || 0;
 
                 if (billData.paid) {
@@ -177,7 +185,6 @@
                 }
             });
 
-            // Wstrzyknięcie zaokrąglonych wartości do widoku (do 2 miejsc po przecinku)
             totalPaidSpan.textContent = paidSum.toFixed(2);
             totalUnpaidSpan.textContent = unpaidSum.toFixed(2);
         }
@@ -188,6 +195,8 @@
                 const billId = createBillId(name);
                 const billData = currentMonthData[billId] || { amount: '', paid: false };
                 
+                if (billData.status === 'removed') return;
+
                 const card = document.getElementById(`card-${billId}`);
                 if (!card) return;
 
@@ -208,13 +217,12 @@
                 }
 
                 if (billData.paid) {
-                    card.style.backgroundColor = "#e6f4ea"; // Zielone tło dla opłaconych
+                    card.style.backgroundColor = "#e6f4ea";
                 } else {
-                    card.style.backgroundColor = "#ffffff"; // Białe tło dla nieopłaconych
+                    card.style.backgroundColor = "#ffffff";
                 }
             });
 
-            // Wywołujemy przeliczenie sum po zaktualizowaniu kart
             calculateTotals();
         }
 
@@ -257,10 +265,16 @@
             set(ref(db, 'registered_bills'), globalRegisteredBills);
         }
 
-        function removeBill(name) {
-            if (confirm(`Czy usunąć "${name}" ze wszystkich miesięcy?`)) {
-                const updatedList = globalRegisteredBills.filter(b => b !== name);
-                set(ref(db, 'registered_bills'), updatedList);
+        // ZMIANA LOGIKI: Usuwanie tylko z bieżącego miesiąca
+        function removeBillFromCurrentMonth(name) {
+            const billId = createBillId(name);
+            if (confirm(`Czy usunąć rachunek "${name}" TYLKO z wybranego miesiąca?`)) {
+                // Zapisujemy flagę status: 'removed' w strukturze wybranego miesiąca
+                update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+                    status: 'removed',
+                    amount: 0, // zerujemy kwotę przy usunięciu z widoku, żeby nie zaburzać sumy
+                    paid: false
+                });
             }
         }
 
