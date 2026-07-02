@@ -9,7 +9,7 @@
             <select id="monthSelect" style="padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc;"></select>
         </div>
         
-        <!-- TUTAJ POJAWI SIĘ PODSUMOWANIE -->
+        <!-- PODSUMOWANIE -->
         <div id="summaryContainer" style="font-size: 16px; display: flex; gap: 20px; font-weight: bold;">
             <span style="color: #2e7d32;">Opłacone: <span id="totalPaid">0.00</span> zł</span>
             <span style="color: #c62828;">Do zapłaty: <span id="totalUnpaid">0.00</span> zł</span>
@@ -74,7 +74,8 @@
         }
 
         const currentYear = new Date().getFullYear();
-        const yearsToGenerate = [currentYear - 1, currentYear, currentYear + 1];
+        // Zmienione: Generujemy tylko rok bieżący i następny (bez roku poprzedniego)
+        const yearsToGenerate = [currentYear, currentYear + 1];
 
         yearsToGenerate.forEach(year => {
             months.forEach((month, index) => {
@@ -84,6 +85,8 @@
                 monthSelect.appendChild(option);
             });
         });
+        
+        // Zawsze automatycznie ustawia na obecny rok i obecny miesiąc (Lipiec 2026)
         monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
         let globalRegisteredBills = [];
@@ -106,12 +109,12 @@
             rebuildGridStructure(); 
         });
 
-        // 2. Słuchaj zmian dla wybranego miasta / miesiąca
+        // 2. Słuchaj zmian dla wybranego miesiąca
         function listenToMonthData() {
             const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
             onValue(monthDataRef, (snapshot) => {
                 currentMonthData = snapshot.val() || {};
-                rebuildGridStructure(); // Odbudowujemy strukturę, aby ukryć/pokazać usunięte karty
+                rebuildGridStructure();
             });
         }
 
@@ -123,7 +126,6 @@
                 const billId = createBillId(name);
                 const billData = currentMonthData[billId] || { amount: '', paid: false };
                 
-                // NOWOŚĆ: Jeśli status to 'removed', ignorujemy ten rachunek w tym konkretnym miesiącu
                 if (billData.status === 'removed') {
                     return; 
                 }
@@ -173,7 +175,6 @@
                 const billId = createBillId(name);
                 const billData = currentMonthData[billId] || { amount: 0, paid: false };
                 
-                // Nie wliczamy do sumy rachunków oznaczonych jako usunięte w danym miesiącu
                 if (billData.status === 'removed') return;
 
                 const amount = parseFloat(billData.amount) || 0;
@@ -265,14 +266,12 @@
             set(ref(db, 'registered_bills'), globalRegisteredBills);
         }
 
-        // ZMIANA LOGIKI: Usuwanie tylko z bieżącego miesiąca
         function removeBillFromCurrentMonth(name) {
             const billId = createBillId(name);
             if (confirm(`Czy usunąć rachunek "${name}" TYLKO z wybranego miesiąca?`)) {
-                // Zapisujemy flagę status: 'removed' w strukturze wybranego miesiąca
                 update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
                     status: 'removed',
-                    amount: 0, // zerujemy kwotę przy usunięciu z widoku, żeby nie zaburzać sumy
+                    amount: 0, 
                     paid: false
                 });
             }
