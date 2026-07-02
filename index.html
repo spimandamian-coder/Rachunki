@@ -1,369 +1,251 @@
-<!-- Import skryptów Firebase z sieci (wersja modułowa) -->
+<!-- SZKIELET STRONY (Jeśli masz już swój, upewnij się, że ID się zgadzają) -->
+<div class="container" style="padding: 20px; font-family: sans-serif;">
+    <h2>Moje Rachunki</h2>
+    
+    <!-- Wybór miesiąca -->
+    <div style="margin-bottom: 20px;">
+        <label for="monthSelect">Wybierz miesiąc: </label>
+        <select id="monthSelect" style="padding: 8px; font-size: 16px;"></select>
+    </div>
 
+    <!-- Dodawanie nowego rachunku -->
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="newBillName" placeholder="Nazwa nowego rachunku..." style="padding: 8px; font-size: 16px; width: 250px;">
+        <button onclick="window.addNewBill()" style="padding: 8px 15px; font-size: 16px; cursor: pointer;">Dodaj</button>
+    </div>
+
+    <!-- Miejsce na karty z rachunkami -->
+    <div id="billsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;"></div>
+</div>
+
+<!-- SKRYPT FIREBASE -->
 <script type="module">
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-
     import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-
-
     // ----------------------------------------------------
-
-    // TUTAJ WKLEJ SWÓJ OBIEKT CONFIG Z FIREBASE:
-
+    // OBIEKT CONFIG Z FIREBASE:
     const firebaseConfig = {
-
         apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
-
         authDomain: "rachunki-realtime.firebaseapp.com",
-
         databaseURL: "https://rachunki-realtime-default-rtdb.europe-west1.firebasedatabase.app",
-
         projectId: "rachunki-realtime",
-
         storageBucket: "rachunki-realtime.firebasestorage.app",
-
         messagingSenderId: "1024588826825",
-
         appId: "1:1024588826825:web:bcba5bb7172aaf9eafa518",
-
         measurementId: "G-FLVENSC5TG"
-
     };
-
     // ----------------------------------------------------
-
-
-
-    // Inicjalizacja Firebase
 
     const app = initializeApp(firebaseConfig);
-
     const db = getDatabase(app);
 
-
-
     const defaultBills = [
-
         "Internet Play", "Woda Tuwima", "Czynsz Tuwima", "Czynsz Armii",
-
         "Fundusz Remontowy", "Gaz Tuwima", "Gaz Armii", "Prad Tuwima",
-
         "Prad Armii", "Prad dzialka", "Treninigi", "Obiady"
-
     ];
-
-
 
     const months = [
-
         "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
-
         "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"
-
     ];
 
-
-
-    const monthSelect = document.getElementById('monthSelect');
-
-    const billsGrid = document.getElementById('billsGrid');
-
-    const newBillNameInput = document.getElementById('newBillName');
-
-
-
-    // Generowanie listy miesięcy
-
-    const currentYear = new Date().getFullYear();
-
-    months.forEach((month, index) => {
-
-        let option = document.createElement('option');
-
-        option.value = `${currentYear}-${index}`;
-
-        option.textContent = `${month} ${currentYear}`;
-
-        monthSelect.appendChild(option);
-
-    });
-
-    monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
-
-
-
-    let globalRegisteredBills = [];
-
-    let currentMonthData = {};
-
-
-
-    // --- SYNCHRONIZACJA Z BAZĄ W CZASIE RZECZYWISTYM ---
-
-
-
-    // 1. Słuchaj zmian na liście nazw rachunków
-
-    const billsListRef = ref(db, 'registered_bills');
-
-    onValue(billsListRef, (snapshot) => {
-
-        const data = snapshot.val();
-
-        if (data) {
-
-            globalRegisteredBills = data;
-
-        } else {
-
-            globalRegisteredBills = defaultBills;
-
-            set(billsListRef, defaultBills);
-
-        }
-
-        rebuildGridStructure(); // Buduj siatkę tylko wtedy, gdy zmienia się lista rachunków
-
-    });
-
-
-
-    // 2. Słuchaj zmian dla wybranego miesiąca
-
-    let currentMonthListener = null;
-
-    function listenToMonthData() {
-
-        const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
-
-        
-
-        // Wyczyszczenie poprzedniego nasłuchiwania przy zmianie miesiąca (jeśli istnieje)
-
-        onValue(monthDataRef, (snapshot) => {
-
-            currentMonthData = snapshot.val() || {};
-
-            updateLiveValues(); // Aktualizuj tylko wartości pól, bez przebudowywania HTML
-
-        });
-
-    }
-
-
-
-    // Funkcja wywoływana rzadziej – tylko przy dodaniu/usunięciu rachunku lub zmianie miesiąca
-
-    function rebuildGridStructure() {
-
-        billsGrid.innerHTML = '';
-
-        
-
-        globalRegisteredBills.forEach(name => {
-
-            const billId = encodeURIComponent(name.toLowerCase().replace(/\s+/g, '_'));
-
-            
-
-            const card = document.createElement('div');
-
-            card.className = `bill-card`;
-
-            card.id = `card-${billId}`;
-
-
-
-            card.innerHTML = `
-
-                <button class="delete-btn" data-name="${name}">×</button>
-
-                <h3 class="bill-title">${name}</h3>
-
-                <div class="input-group">
-
-                    <label>Kwota (zł):</label>
-
-                    <input type="number" step="0.01" class="amount-input" data-id="${billId}" placeholder="0.00">
-
-                </div>
-
-                <label class="checkbox-group">
-
-                    <input type="checkbox" class="paid-checkbox" data-id="${billId}">
-
-                    Opłacone
-
-                </label>
-
-            `;
-
-
-
-            card.querySelector('.delete-btn').addEventListener('click', () => removeBill(name));
-
-            card.querySelector('.amount-input').addEventListener('input', (e) => updateAmount(billId, e.target.value));
-
-            card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
-
-
-
-            billsGrid.appendChild(card);
-
-        });
-
-        
-
-        // Po zbudowaniu struktury, uzupełnij ją aktualnymi danymi
-
-        updateLiveValues();
-
-    }
-
-
-
-    // KLUCZOWA POPRAWKA: Ta funkcja podmienia dane w polach bez niszczenia elementów DOM
-
-    function updateLiveValues() {
-
-        globalRegisteredBills.forEach(name => {
-
-            const billId = encodeURIComponent(name.toLowerCase().replace(/\s+/g, '_'));
-
-            const billData = currentMonthData[billId] || { amount: '', paid: false };
-
-            
-
-            const card = document.getElementById(`card-${billId}`);
-
-            if (!card) return;
-
-
-
-            const amountInput = card.querySelector('.amount-input');
-
-            const paidCheckbox = card.querySelector('.paid-checkbox');
-
-
-
-            // Aktualizuj kwotę tylko wtedy, gdy użytkownik nie ma na niej aktywnego focusu
-
-            if (document.activeElement !== amountInput) {
-
-                amountInput.value = billData.amount;
-
-            }
-
-
-
-            // Aktualizuj checkbox
-
-            paidCheckbox.checked = billData.paid;
-
-
-
-            // Aktualizuj style karty (kolor czerwony/zielony)
-
-            if (billData.paid) {
-
-                card.classList.add('paid');
-
-            } else {
-
-                card.classList.remove('paid');
-
-            }
-
-        });
-
-    }
-
-
-
-    // --- FUNKCJE ZAPISUJĄCE DO BAZY ---
-
-
-
-    window.addNewBill = function() {
-
-        const name = newBillNameInput.value.trim();
-
-        if (!name) return;
-
-        if (globalRegisteredBills.includes(name)) {
-
-            alert("Taki rachunek już istnieje!");
-
+    // Zamykamy logikę w zdarzeniu DOMContentLoaded, aby upewnić się, że elementy HTML istnieją
+    document.addEventListener("DOMContentLoaded", () => {
+        const monthSelect = document.getElementById('monthSelect');
+        const billsGrid = document.getElementById('billsGrid');
+        const newBillNameInput = document.getElementById('newBillName');
+
+        // Sprawdzamy czy elementy na pewno istnieją w dokumencie
+        if (!monthSelect || !billsGrid || !newBillNameInput) {
+            console.error("Błąd: Nie znaleziono wymaganych elementów HTML na stronie! Sprawdź czy ID (monthSelect, billsGrid, newBillName) są poprawne.");
             return;
-
         }
 
-        globalRegisteredBills.push(name);
+        // Generowanie listy miesięcy (Lata: poprzedni, obecny, następny)
+        const currentYear = new Date().getFullYear();
+        const yearsToGenerate = [currentYear - 1, currentYear, currentYear + 1];
 
-        set(ref(db, 'registered_bills'), globalRegisteredBills);
+        yearsToGenerate.forEach(year => {
+            months.forEach((month, index) => {
+                let option = document.createElement('option');
+                option.value = `${year}-${index}`;
+                option.textContent = `${month} ${year}`;
+                monthSelect.appendChild(option);
+            });
+        });
+        monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
-        newBillNameInput.value = '';
+        let globalRegisteredBills = [];
+        let currentMonthData = {};
 
-    }
-
-
-
-    function removeBill(name) {
-
-        if (confirm(`Czy usunąć "${name}" ze wszystkich miesięcy?`)) {
-
-            const updatedList = globalRegisteredBills.filter(b => b !== name);
-
-            set(ref(db, 'registered_bills'), updatedList);
-
+        function createBillId(name) {
+            return encodeURIComponent(name.toLowerCase().trim().replace(/\s+/g, '_'));
         }
 
-    }
-
-
-
-    function updateAmount(billId, value) {
-
-        update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
-
-            amount: value
-
+        // 1. Słuchaj zmian na liście nazw rachunków
+        const billsListRef = ref(db, 'registered_bills');
+        onValue(billsListRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                globalRegisteredBills = data;
+            } else {
+                globalRegisteredBills = defaultBills;
+                set(billsListRef, defaultBills);
+            }
+            rebuildGridStructure(); 
         });
 
-    }
+        // 2. Słuchaj zmian dla wybranego miesiąca
+        function listenToMonthData() {
+            const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
+            onValue(monthDataRef, (snapshot) => {
+                currentMonthData = snapshot.val() || {};
+                updateLiveValues(); 
+            });
+        }
 
+        // Budowanie struktury kart
+        function rebuildGridStructure() {
+            billsGrid.innerHTML = '';
+            
+            globalRegisteredBills.forEach((name, index) => {
+                const billId = createBillId(name);
+                
+                const card = document.createElement('div');
+                card.className = `bill-card`;
+                card.id = `card-${billId}`;
+                card.style.border = "1px solid #ccc";
+                card.style.padding = "15px";
+                card.style.borderRadius = "8px";
+                card.style.position = "relative";
 
+                card.innerHTML = `
+                    <button class="delete-btn" style="position: absolute; top: 5px; right: 10px; background: none; border: none; font-size: 20px; cursor: pointer; color: red;">×</button>
+                    <div class="input-group" style="margin-bottom: 15px;">
+                        <label style="display:block; margin-bottom:5px;">Nazwa opłaty:</label>
+                        <input type="text" class="name-input" value="${name}" style="font-weight: bold; font-size: 16px; border: none; background: transparent; padding: 0; border-bottom: 1px dashed #ccc; border-radius: 0; width: 100%;">
+                    </div>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <label style="display:block; margin-bottom:5px;">Kwota (zł):</label>
+                        <input type="number" step="0.01" class="amount-input" placeholder="0.00" style="padding: 5px; width: 90%;">
+                    </div>
+                    <label class="checkbox-group" style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="checkbox" class="paid-checkbox">
+                        Opłacone
+                    </label>
+                `;
 
-    function togglePaid(billId, isChecked) {
+                card.querySelector('.delete-btn').addEventListener('click', () => removeBill(name));
+                card.querySelector('.amount-input').addEventListener('input', (e) => updateAmount(billId, e.target.value));
+                card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
+                card.querySelector('.name-input').addEventListener('change', (e) => updateBillName(index, name, e.target.value));
 
-        update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+                billsGrid.appendChild(card);
+            });
+            
+            updateLiveValues();
+        }
 
-            paid: isChecked
+        // Aktualizacja wartości "w locie"
+        function updateLiveValues() {
+            globalRegisteredBills.forEach(name => {
+                const billId = createBillId(name);
+                const billData = currentMonthData[billId] || { amount: '', paid: false };
+                
+                const card = document.getElementById(`card-${billId}`);
+                if (!card) return;
 
+                const nameInput = card.querySelector('.name-input');
+                const amountInput = card.querySelector('.amount-input');
+                const paidCheckbox = card.querySelector('.paid-checkbox');
+
+                if (document.activeElement !== nameInput && nameInput) {
+                    nameInput.value = name;
+                }
+
+                if (document.activeElement !== amountInput && amountInput) {
+                    amountInput.value = billData.amount;
+                }
+
+                if (paidCheckbox) {
+                    paidCheckbox.checked = billData.paid;
+                }
+
+                if (billData.paid) {
+                    card.style.backgroundColor = "#e6f4ea"; // Zielone tło dla opłaconych
+                } else {
+                    card.style.backgroundColor = "#ffffff"; // Białe tło dla nieopłaconych
+                }
+            });
+        }
+
+        // --- FUNKCJE GLOBALNE ---
+
+        window.addNewBill = function() {
+            const name = newBillNameInput.value.trim();
+            if (!name) return;
+            if (globalRegisteredBills.includes(name)) {
+                alert("Taki rachunek już istnieje!");
+                return;
+            }
+            globalRegisteredBills.push(name);
+            set(ref(db, 'registered_bills'), globalRegisteredBills);
+            newBillNameInput.value = '';
+        }
+
+        function updateBillName(index, oldName, newName) {
+            const cleanedNewName = newName.trim();
+            if (!cleanedNewName || cleanedNewName === oldName) {
+                rebuildGridStructure();
+                return;
+            }
+
+            if (globalRegisteredBills.includes(cleanedNewName)) {
+                alert("Rachunek o takiej nazwie już istnieje!");
+                rebuildGridStructure();
+                return;
+            }
+
+            const oldId = createBillId(oldName);
+            const newId = createBillId(cleanedNewName);
+
+            if (currentMonthData[oldId]) {
+                set(ref(db, `months_data/${monthSelect.value}/${newId}`), currentMonthData[oldId]);
+                set(ref(db, `months_data/${monthSelect.value}/${oldId}`), null);
+            }
+
+            globalRegisteredBills[index] = cleanedNewName;
+            set(ref(db, 'registered_bills'), globalRegisteredBills);
+        }
+
+        function removeBill(name) {
+            if (confirm(`Czy usunąć "${name}" ze wszystkich miesięcy?`)) {
+                const updatedList = globalRegisteredBills.filter(b => b !== name);
+                set(ref(db, 'registered_bills'), updatedList);
+            }
+        }
+
+        function updateAmount(billId, value) {
+            update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+                amount: value
+            });
+        }
+
+        function togglePaid(billId, isChecked) {
+            update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+                paid: isChecked
+            });
+        }
+
+        monthSelect.addEventListener('change', () => {
+            listenToMonthData();
         });
+        
+        newBillNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewBill(); });
 
-    }
-
-
-
-    // Zmiana miesiąca wymusza przebudowę i zmianę nasłuchiwania
-
-    monthSelect.addEventListener('change', () => {
-
+        // Uruchomienie nasłuchu bazy
         listenToMonthData();
-
     });
-
-    
-
-    newBillNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewBill(); });
-
-
-
-    // Start
-
-    listenToMonthData();
-
 </script>
