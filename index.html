@@ -1,7 +1,7 @@
 <!-- Import skryptów Firebase z sieci (wersja modułowa) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     // ----------------------------------------------------
     // OBIEKT CONFIG Z FIREBASE:
@@ -35,7 +35,7 @@
     const billsGrid = document.getElementById('billsGrid');
     const newBillNameInput = document.getElementById('newBillName');
 
-    // Generowanie lat (w tym 2027)
+    // Generowanie lat (2025, 2026, 2027)
     const currentYear = new Date().getFullYear();
     const yearsToGenerate = [currentYear - 1, currentYear, currentYear + 1];
 
@@ -52,7 +52,6 @@
     let globalRegisteredBills = [];
     let currentMonthData = {};
 
-    // Pomocnicza funkcja do tworzenia bezpiecznego ID z nazwy
     function createBillId(name) {
         return encodeURIComponent(name.toLowerCase().trim().replace(/\s+/g, '_'));
     }
@@ -79,7 +78,7 @@
         });
     }
 
-    // Budowanie szkieletu HTML (wywoływane tylko przy zmianie liczby rachunków lub zmianie nazwy)
+    // Budowanie szkieletu HTML
     function rebuildGridStructure() {
         billsGrid.innerHTML = '';
         
@@ -91,17 +90,17 @@
             card.id = `card-${billId}`;
 
             card.innerHTML = `
-                <button class="delete-btn" data-name="${name}">×</button>
+                <button class="delete-btn">×</button>
                 <div class="input-group" style="margin-bottom: 15px;">
                     <label>Nazwa opłaty:</label>
-                    <input type="text" class="name-input" data-index="${index}" value="${name}" style="font-weight: bold; font-size: 16px; border: none; background: transparent; padding: 0; border-bottom: 1px dashed #ccc; border-radius: 0; width: 100%;">
+                    <input type="text" class="name-input" value="${name}" style="font-weight: bold; font-size: 16px; border: none; background: transparent; padding: 0; border-bottom: 1px dashed #ccc; border-radius: 0; width: 100%;">
                 </div>
                 <div class="input-group">
                     <label>Kwota (zł):</label>
-                    <input type="number" step="0.01" class="amount-input" data-id="${billId}" placeholder="0.00">
+                    <input type="number" step="0.01" class="amount-input" placeholder="0.00">
                 </div>
                 <label class="checkbox-group">
-                    <input type="checkbox" class="paid-checkbox" data-id="${billId}">
+                    <input type="checkbox" class="paid-checkbox">
                     Opłacone
                 </label>
             `;
@@ -109,10 +108,7 @@
             card.querySelector('.delete-btn').addEventListener('click', () => removeBill(name));
             card.querySelector('.amount-input').addEventListener('input', (e) => updateAmount(billId, e.target.value));
             card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
-            
-            // Zmiana nazwy zapisuje się po kliknięciu poza pole (blur) lub naciśnięciu Enter
-            const nameInput = card.querySelector('.name-input');
-            nameInput.addEventListener('change', (e) => updateBillName(index, name, e.target.value));
+            card.querySelector('.name-input').addEventListener('change', (e) => updateBillName(index, name, e.target.value));
 
             billsGrid.appendChild(card);
         });
@@ -120,14 +116,14 @@
         updateLiveValues();
     }
 
-    // Aktualizacja wartości pól (działa w tle, bez przeładowywania i psucia DOM)
+    // Aktualizacja samych wartości (działa w tle)
     function updateLiveValues() {
         globalRegisteredBills.forEach(name => {
             const billId = createBillId(name);
             const billData = currentMonthData[billId] || { amount: '', paid: false };
             
             const card = document.getElementById(`card-${billId}`);
-            if (!card) return; // Zabezpieczenie przed błędem crashowania strony
+            if (!card) return;
 
             const nameInput = card.querySelector('.name-input');
             const amountInput = card.querySelector('.amount-input');
@@ -141,7 +137,9 @@
                 amountInput.value = billData.amount;
             }
 
-            if (paidCheckbox) paidCheckbox.checked = billData.paid;
+            if (paidCheckbox) {
+                paidCheckbox.checked = billData.paid;
+            }
 
             if (billData.paid) {
                 card.classList.add('paid');
@@ -165,8 +163,7 @@
         newBillNameInput.value = '';
     }
 
-    // BEZPIECZNA ZMIANA NAZWY: Przepina też stare kwoty w wybranym miesiącu pod nowe ID
-    async function updateBillName(index, oldName, newName) {
+    function updateBillName(index, oldName, newName) {
         const cleanedNewName = newName.trim();
         if (!cleanedNewName || cleanedNewName === oldName) {
             rebuildGridStructure();
@@ -182,19 +179,15 @@
         const oldId = createBillId(oldName);
         const newId = createBillId(cleanedNewName);
 
-        // 1. Pobierz aktualne dane dla starego ID z tego miesiąca
-        const oldDataRef = ref(db, `months_data/${monthSelect.value}/${oldId}`);
-        const snapshot = await get(oldDataRef);
-        
-        if (snapshot.exists()) {
-            // 2. Przepisz dane pod nowe ID i usuń stare wpisy
-            await set(ref(db, `months_data/${monthSelect.value}/${newId}`), snapshot.val());
-            await set(oldDataRef, null);
+        // Przenoszenie danych kwot w bazie ze starej nazwy na nową
+        if (currentMonthData[oldId]) {
+            set(ref(db, `months_data/${monthSelect.value}/${newId}`), currentMonthData[oldId]);
+            set(ref(db, `months_data/${monthSelect.value}/${oldId}`), null);
         }
 
-        // 3. Zaktualizuj listę globalną nazw
+        // Aktualizacja na liście głównej
         globalRegisteredBills[index] = cleanedNewName;
-        await set(ref(db, 'registered_bills'), globalRegisteredBills);
+        set(ref(db, 'registered_bills'), globalRegisteredBills);
     }
 
     function removeBill(name) {
