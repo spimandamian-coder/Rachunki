@@ -1,17 +1,27 @@
-<!-- SZKIELET STRONY (Jeśli masz już swój, upewnij się, że ID się zgadzają) -->
+<!-- SZKIELET STRONY -->
 <div class="container" style="padding: 20px; font-family: sans-serif;">
     <h2>Moje Rachunki</h2>
     
-    <!-- Wybór miesiąca -->
-    <div style="margin-bottom: 20px;">
-        <label for="monthSelect">Wybierz miesiąc: </label>
-        <select id="monthSelect" style="padding: 8px; font-size: 16px;"></select>
+    <!-- Górny pasek: Wybór miesiąca oraz dynamiczne podsumowanie -->
+    <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; background: #f5f5f5; padding: 15px; border-radius: 8px;">
+        <div>
+            <label for="monthSelect" style="font-weight: bold;">Wybierz miesiąc: </label>
+            <select id="monthSelect" style="padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc;"></select>
+        </div>
+        
+        <!-- TUTAJ POJAWI SIĘ PODSUMOWANIE -->
+        <div id="summaryContainer" style="font-size: 16px; display: flex; gap: 20px; font-weight: bold;">
+            <span style="color: #2e7d32;">Opłacone: <span id="totalPaid">0.00</span> zł</span>
+            <span style="color: #c62828;">Do zapłaty: <span id="totalUnpaid">0.00</span> zł</span>
+        </div>
+        
+        <div style="visibility: hidden; width: 100px;"></div> <!-- Bufor do wyśrodkowania na większych ekranach -->
     </div>
 
     <!-- Dodawanie nowego rachunku -->
     <div style="margin-bottom: 20px;">
-        <input type="text" id="newBillName" placeholder="Nazwa nowego rachunku..." style="padding: 8px; font-size: 16px; width: 250px;">
-        <button onclick="window.addNewBill()" style="padding: 8px 15px; font-size: 16px; cursor: pointer;">Dodaj</button>
+        <input type="text" id="newBillName" placeholder="Nazwa nowego rachunku..." style="padding: 8px; font-size: 16px; width: 250px; border-radius: 4px; border: 1px solid #ccc;">
+        <button onclick="window.addNewBill()" style="padding: 8px 15px; font-size: 16px; cursor: pointer; border-radius: 4px; background-color: #007bff; color: white; border: none;">Dodaj</button>
     </div>
 
     <!-- Miejsce na karty z rachunkami -->
@@ -51,19 +61,18 @@
         "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"
     ];
 
-    // Zamykamy logikę w zdarzeniu DOMContentLoaded, aby upewnić się, że elementy HTML istnieją
     document.addEventListener("DOMContentLoaded", () => {
         const monthSelect = document.getElementById('monthSelect');
         const billsGrid = document.getElementById('billsGrid');
         const newBillNameInput = document.getElementById('newBillName');
+        const totalPaidSpan = document.getElementById('totalPaid');
+        const totalUnpaidSpan = document.getElementById('totalUnpaid');
 
-        // Sprawdzamy czy elementy na pewno istnieją w dokumencie
-        if (!monthSelect || !billsGrid || !newBillNameInput) {
-            console.error("Błąd: Nie znaleziono wymaganych elementów HTML na stronie! Sprawdź czy ID (monthSelect, billsGrid, newBillName) są poprawne.");
+        if (!monthSelect || !billsGrid || !newBillNameInput || !totalPaidSpan || !totalUnpaidSpan) {
+            console.error("Błąd: Nie znaleziono wymaganych elementów HTML na stronie!");
             return;
         }
 
-        // Generowanie listy miesięcy (Lata: poprzedni, obecny, następny)
         const currentYear = new Date().getFullYear();
         const yearsToGenerate = [currentYear - 1, currentYear, currentYear + 1];
 
@@ -120,6 +129,7 @@
                 card.style.padding = "15px";
                 card.style.borderRadius = "8px";
                 card.style.position = "relative";
+                card.style.transition = "background-color 0.3s ease";
 
                 card.innerHTML = `
                     <button class="delete-btn" style="position: absolute; top: 5px; right: 10px; background: none; border: none; font-size: 20px; cursor: pointer; color: red;">×</button>
@@ -146,6 +156,30 @@
             });
             
             updateLiveValues();
+        }
+
+        // NOWA FUNKCJA: Przeliczanie sum podsumowania
+        function calculateTotals() {
+            let paidSum = 0;
+            let unpaidSum = 0;
+
+            globalRegisteredBills.forEach(name => {
+                const billId = createBillId(name);
+                const billData = currentMonthData[billId] || { amount: 0, paid: false };
+                
+                // Konwersja tekstu z inputa na bezpieczną liczbę zmiennoprzecinkową
+                const amount = parseFloat(billData.amount) || 0;
+
+                if (billData.paid) {
+                    paidSum += amount;
+                } else {
+                    unpaidSum += amount;
+                }
+            });
+
+            // Wstrzyknięcie zaokrąglonych wartości do widoku (do 2 miejsc po przecinku)
+            totalPaidSpan.textContent = paidSum.toFixed(2);
+            totalUnpaidSpan.textContent = unpaidSum.toFixed(2);
         }
 
         // Aktualizacja wartości "w locie"
@@ -179,6 +213,9 @@
                     card.style.backgroundColor = "#ffffff"; // Białe tło dla nieopłaconych
                 }
             });
+
+            // Wywołujemy przeliczenie sum po zaktualizowaniu kart
+            calculateTotals();
         }
 
         // --- FUNKCJE GLOBALNE ---
@@ -245,7 +282,6 @@
         
         newBillNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewBill(); });
 
-        // Uruchomienie nasłuchu bazy
         listenToMonthData();
     });
 </script>
