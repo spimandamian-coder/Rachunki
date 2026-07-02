@@ -4,7 +4,7 @@
     import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     // ----------------------------------------------------
-    // TUTAJ WKLEJ SWÓJ OBIEKT CONFIG Z FIREBASE:
+    // OBIEKT CONFIG Z FIREBASE:
     const firebaseConfig = {
         apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
         authDomain: "rachunki-realtime.firebaseapp.com",
@@ -36,14 +36,19 @@
     const billsGrid = document.getElementById('billsGrid');
     const newBillNameInput = document.getElementById('newBillName');
 
-    // Generowanie listy miesięcy
+    // 1. POPRAWKA: Dynamiczne generowanie lat (Poprzedni, Bieżący, Kolejny - w tym 2027)
     const currentYear = new Date().getFullYear();
-    months.forEach((month, index) => {
-        let option = document.createElement('option');
-        option.value = `${currentYear}-${index}`;
-        option.textContent = `${month} ${currentYear}`;
-        monthSelect.appendChild(option);
+    const yearsToGenerate = [currentYear - 1, currentYear, currentYear + 1]; // Generuje np. 2025, 2026, 2027
+
+    yearsToGenerate.forEach(year => {
+        months.forEach((month, index) => {
+            let option = document.createElement('option');
+            option.value = `${year}-${index}`;
+            option.textContent = `${month} ${year}`;
+            monthSelect.appendChild(option);
+        });
     });
+    // Ustawienie domyślnego zaznaczenia na obecny miesiąc i rok
     monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
     let globalRegisteredBills = [];
@@ -51,7 +56,7 @@
 
     // --- SYNCHRONIZACJA Z BAZĄ W CZASIE RZECZYWISTYM ---
 
-    // 1. Słuchaj zmian na liście nazw rachunków
+    // Słuchaj zmian na liście nazw rachunków
     const billsListRef = ref(db, 'registered_bills');
     onValue(billsListRef, (snapshot) => {
         const data = snapshot.val();
@@ -61,35 +66,37 @@
             globalRegisteredBills = defaultBills;
             set(billsListRef, defaultBills);
         }
-        rebuildGridStructure(); // Buduj siatkę tylko wtedy, gdy zmienia się lista rachunków
+        rebuildGridStructure(); 
     });
 
-    // 2. Słuchaj zmian dla wybranego miesiąca
-    let currentMonthListener = null;
+    // Słuchaj zmian dla wybranego miesiąca
     function listenToMonthData() {
         const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
         
-        // Wyczyszczenie poprzedniego nasłuchiwania przy zmianie miesiąca (jeśli istnieje)
         onValue(monthDataRef, (snapshot) => {
             currentMonthData = snapshot.val() || {};
-            updateLiveValues(); // Aktualizuj tylko wartości pól, bez przebudowywania HTML
+            updateLiveValues(); 
         });
     }
 
-    // Funkcja wywoływana rzadziej – tylko przy dodaniu/usunięciu rachunku lub zmianie miesiąca
+    // Budowanie struktury – wywoływane przy zmianie struktury listy lub zmianie miesiąca
     function rebuildGridStructure() {
         billsGrid.innerHTML = '';
         
-        globalRegisteredBills.forEach(name => {
+        globalRegisteredBills.forEach((name, index) => {
             const billId = encodeURIComponent(name.toLowerCase().replace(/\s+/g, '_'));
             
             const card = document.createElement('div');
             card.className = `bill-card`;
             card.id = `card-${billId}`;
 
+            // 2. POPRAWKA: Zamiana nagłówka h3 na pole tekstowe (input) do edycji nazwy na żywo
             card.innerHTML = `
                 <button class="delete-btn" data-name="${name}">×</button>
-                <h3 class="bill-title">${name}</h3>
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <label>Nazwa opłaty:</label>
+                    <input type="text" class="name-input" data-index="${index}" value="${name}" style="font-weight: bold; font-size: 16px; border: none; background: transparent; padding: 0; border-bottom: 1px dashed #ccc; border-radius: 0;">
+                </div>
                 <div class="input-group">
                     <label>Kwota (zł):</label>
                     <input type="number" step="0.01" class="amount-input" data-id="${billId}" placeholder="0.00">
@@ -100,18 +107,22 @@
                 </label>
             `;
 
+            // Rejestracja zdarzeń
             card.querySelector('.delete-btn').addEventListener('click', () => removeBill(name));
             card.querySelector('.amount-input').addEventListener('input', (e) => updateAmount(billId, e.target.value));
             card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
+            
+            // Nasłuchiwanie zmiany nazwy rachunku
+            const nameInput = card.querySelector('.name-input');
+            nameInput.addEventListener('change', (e) => updateBillName(index, name, e.target.value));
 
             billsGrid.appendChild(card);
         });
         
-        // Po zbudowaniu struktury, uzupełnij ją aktualnymi danymi
         updateLiveValues();
     }
 
-    // KLUCZOWA POPRAWKA: Ta funkcja podmienia dane w polach bez niszczenia elementów DOM
+    // Aktualizacja wartości pól bez niszczenia DOM
     function updateLiveValues() {
         globalRegisteredBills.forEach(name => {
             const billId = encodeURIComponent(name.toLowerCase().replace(/\s+/g, '_'));
@@ -120,18 +131,23 @@
             const card = document.getElementById(`card-${billId}`);
             if (!card) return;
 
+            const nameInput = card.querySelector('.name-input');
             const amountInput = card.querySelector('.amount-input');
             const paidCheckbox = card.querySelector('.paid-checkbox');
 
-            // Aktualizuj kwotę tylko wtedy, gdy użytkownik nie ma na niej aktywnego focusu
+            // Synchronizuj nazwę, jeśli użytkownik akurat jej nie edytuje
+            if (document.activeElement !== nameInput && nameInput) {
+                nameInput.value = name;
+            }
+
+            // Synchronizuj kwotę
             if (document.activeElement !== amountInput) {
                 amountInput.value = billData.amount;
             }
 
-            // Aktualizuj checkbox
+            // Synchronizuj status opłacenia
             paidCheckbox.checked = billData.paid;
 
-            // Aktualizuj style karty (kolor czerwony/zielony)
             if (billData.paid) {
                 card.classList.add('paid');
             } else {
@@ -140,7 +156,7 @@
         });
     }
 
-    // --- FUNKCJE ZAPISUJĄCE DO BAZY ---
+    // --- FUNKCJE BAZODANOWE ---
 
     window.addNewBill = function() {
         const name = newBillNameInput.value.trim();
@@ -152,6 +168,25 @@
         globalRegisteredBills.push(name);
         set(ref(db, 'registered_bills'), globalRegisteredBills);
         newBillNameInput.value = '';
+    }
+
+    // Nowa funkcja: Zmiana nazwy rachunku na liście globalnej
+    function updateBillName(index, oldName, newName) {
+        const cleanedNewName = newName.trim();
+        if (!cleanedNewName || cleanedNewName === oldName) return;
+
+        if (globalRegisteredBills.includes(cleanedNewName)) {
+            alert("Rachunek o takiej nazwie już istnieje!");
+            rebuildGridStructure(); // przywraca starą nazwę w widoku
+            return;
+        }
+
+        // Aktualizuj pozycję w tablicy i wyślij do Firebase
+        globalRegisteredBills[index] = cleanedNewName;
+        set(ref(db, 'registered_bills'), globalRegisteredBills);
+        
+        // Uwaga: Dane kwot przypisane do starego identyfikatora (starej nazwy) w miesiącach 
+        // pozostaną w bazie, ale nowy identyfikator zacznie zbierać nowe wpisy.
     }
 
     function removeBill(name) {
@@ -173,13 +208,12 @@
         });
     }
 
-    // Zmiana miesiąca wymusza przebudowę i zmianę nasłuchiwania
     monthSelect.addEventListener('change', () => {
         listenToMonthData();
     });
     
     newBillNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewBill(); });
 
-    // Start
+    // Start aplikacji
     listenToMonthData();
 </script>
