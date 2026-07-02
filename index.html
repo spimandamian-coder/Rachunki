@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menedżer Rachunków</title>
+    <title>Menedżer Rachunków Realtime</title>
     <style>
         :root {
             --bg-color: #f4f7f6;
@@ -124,7 +124,6 @@
             cursor: pointer;
         }
 
-        /* Sekcja dodawania nowego rachunku */
         .add-bill-panel {
             background: #fff;
             padding: 20px;
@@ -190,26 +189,47 @@
 
 <div class="container">
     <header>
-        <h1>Wykaz Rachunków</h1>
+        <h1>Wykaz Rachunków (Realtime)</h1>
         <div class="month-selector">
             <label for="monthSelect">Wybierz miesiąc: </label>
             <select id="monthSelect"></select>
         </div>
     </header>
 
-    <div class="bills-grid" id="billsGrid"></div>
+    <div class="bills-grid" id="billsGrid">Ladowanie danych z bazy...</div>
 
     <div class="add-bill-panel">
         <h2>Dodaj nową opłatę do wykazu</h2>
         <div class="add-form">
-            <input type="text" id="newBillName" placeholder="Np. Prąd garaż, Abonament HBO, Ubezpieczenie...">
+            <input type="text" id="newBillName" placeholder="Np. Prąd garaż, Abonament HBO...">
             <button onclick="addNewBill()">Dodaj opłatę</button>
         </div>
     </div>
 </div>
 
-<script>
-    // Domyślna lista rachunków (używana tylko przy pierwszym uruchomieniu w historii)
+<!-- Import skryptów Firebase z sieci (wersja modułowa) -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // ----------------------------------------------------
+    // TUTAJ WKLEJ SWÓJ OBIEKT CONFIG Z FIREBASE:
+    const firebaseConfig = {
+  apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
+  authDomain: "rachunki-realtime.firebaseapp.com",
+  databaseURL: "https://rachunki-realtime-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "rachunki-realtime",
+  storageBucket: "rachunki-realtime.firebasestorage.app",
+  messagingSenderId: "1024588826825",
+  appId: "1:1024588826825:web:bcba5bb7172aaf9eafa518",
+  measurementId: "G-FLVENSC5TG"
+};
+    // ----------------------------------------------------
+
+    // Inicjalizacja Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
     const defaultBills = [
         "Internet Play", "Woda Tuwima", "Czynsz Tuwima", "Czynsz Armii",
         "Fundusz Remontowy", "Gaz Tuwima", "Gaz Armii", "Prad Tuwima",
@@ -225,7 +245,7 @@
     const billsGrid = document.getElementById('billsGrid');
     const newBillNameInput = document.getElementById('newBillName');
 
-    // Inicjalizacja listy miesięcy (rok bieżący)
+    // Generowanie listy miesięcy
     const currentYear = new Date().getFullYear();
     months.forEach((month, index) => {
         let option = document.createElement('option');
@@ -233,48 +253,42 @@
         option.textContent = `${month} ${currentYear}`;
         monthSelect.appendChild(option);
     });
+    monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
-    // Ustawienie aktualnego miesiąca jako domyślny przy otwarciu
-    const currentMonthIndex = new Date().getMonth();
-    monthSelect.value = `${currentYear}-${currentMonthIndex}`;
+    // Zmienne przechowujące aktualny stan pobrany z bazy
+    let globalRegisteredBills = [];
+    let currentMonthData = {};
 
-    // --- LOGIKA ZARZĄDZANIA NAZWAMI RACHUNKÓW ---
-    function getRegisteredBills() {
-        const savedNames = localStorage.getItem('registered_bill_names');
-        if (savedNames) {
-            return JSON.parse(savedNames);
+    // --- SYNCHRONIZACJA Z BAZĄ W CZASIE RZECZYWISTYM ---
+
+    // 1. Słuchaj zmian na liście nazw rachunków
+    const billsListRef = ref(db, 'registered_bills');
+    onValue(billsListRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            globalRegisteredBills = data;
         } else {
-            localStorage.setItem('registered_bill_names', JSON.stringify(defaultBills));
-            return defaultBills;
+            // Jeśli baza jest pusta, uzupełnij ją domyślnymi
+            globalRegisteredBills = defaultBills;
+            set(billsListRef, defaultBills);
         }
+        syncAndRender();
+    });
+
+    // 2. Słuchaj zmian dla wybranego miesiąca
+    function listenToMonthData() {
+        const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
+        onValue(monthDataRef, (snapshot) => {
+            currentMonthData = snapshot.val() || {};
+            syncAndRender();
+        });
     }
 
-    function saveRegisteredBills(billNamesList) {
-        localStorage.setItem('registered_bill_names', JSON.stringify(billNamesList));
-    }
-
-    // --- LOGIKA ZARZĄDZANIA DANYMI (KWOTY/STATUSY) DLA DANIEGO MIESIĄCA ---
-    function getStorageKey() {
-        return `bills_data_${monthSelect.value}`;
-    }
-
-    function loadMonthData() {
-        const savedData = localStorage.getItem(getStorageKey());
-        return savedData ? JSON.parse(savedData) : {};
-    }
-
-    function saveMonthData(data) {
-        localStorage.setItem(getStorageKey(), JSON.stringify(data));
-    }
-
-    // --- RENDEROWANIE WIDOKU ---
-    function renderBills() {
+    // Wywołaj renderowanie przy każdej zmianie struktury lub danych
+    function syncAndRender() {
         billsGrid.innerHTML = '';
-        const billNames = getRegisteredBills();
-        const currentMonthData = loadMonthData();
-
-        billNames.forEach(name => {
-            // Generowanie unikalnego ID bez spacji i dziwnych znaków
+        
+        globalRegisteredBills.forEach(name => {
             const billId = encodeURIComponent(name.toLowerCase().replace(/\s+/g, '_'));
             const billData = currentMonthData[billId] || { amount: '', paid: false };
 
@@ -283,89 +297,66 @@
             card.id = `card-${billId}`;
 
             card.innerHTML = `
-                <button class="delete-btn" onclick="removeBill('${name}')" title="Usuń ten rachunek z listy całkowicie">×</button>
+                <button class="delete-btn" data-name="${name}">×</button>
                 <h3 class="bill-title">${name}</h3>
                 <div class="input-group">
                     <label>Kwota (zł):</label>
-                    <input type="number" step="0.01" value="${billData.amount}" 
-                           placeholder="0.00" oninput="updateAmount('${billId}', this.value)">
+                    <input type="number" step="0.01" class="amount-input" data-id="${billId}" value="${billData.amount}" placeholder="0.00">
                 </div>
                 <label class="checkbox-group">
-                    <input type="checkbox" ${billData.paid ? 'checked' : ''} 
-                           onchange="togglePaid('${billId}', this.checked)">
+                    <input type="checkbox" class="paid-checkbox" data-id="${billId}" ${billData.paid ? 'checked' : ''}>
                     Opłacone
                 </label>
             `;
+
+            // Dynamiczne podpięcie eventów bezpośrednio w kodzie JS (wymagane w type="module")
+            card.querySelector('.delete-btn').addEventListener('click', () => removeBill(name));
+            card.querySelector('.amount-input').addEventListener('input', (e) => updateAmount(billId, e.target.value));
+            card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
 
             billsGrid.appendChild(card);
         });
     }
 
-    // Funkcja dodawania nowego rachunku z formularza na dole
+    // --- FUNKCJE ZAPISUJĄCE DO BAZY ---
+
     window.addNewBill = function() {
         const name = newBillNameInput.value.trim();
         if (!name) return;
-
-        let billNames = getRegisteredBills();
-        
-        // Zabezpieczenie przed dublowaniem nazw
-        if (billNames.includes(name)) {
-            alert("Taki rachunek już istnieje na liście!");
+        if (globalRegisteredBills.includes(name)) {
+            alert("Taki rachunek już istnieje!");
             return;
         }
-
-        billNames.push(name);
-        saveRegisteredBills(billNames);
-        
-        newBillNameInput.value = ''; // Czyszczenie pola tekstowego
-        renderBills(); // Odświeżenie widoku
+        globalRegisteredBills.push(name);
+        set(ref(db, 'registered_bills'), globalRegisteredBills);
+        newBillNameInput.value = '';
     }
 
-    // Obsługa dodawania po kliknięciu Enter w polu tekstowym
-    newBillNameInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            addNewBill();
-        }
-    });
-
-    // Funkcja usuwania rachunku całkowicie ze struktury globalnej
-    window.removeBill = function(name) {
-        if (confirm(`Czy na pewno chcesz usunąć rachunek "${name}" ze wszystkich miesięcy?`)) {
-            let billNames = getRegisteredBills();
-            billNames = billNames.filter(b => b !== name);
-            saveRegisteredBills(billNames);
-            renderBills();
+    function removeBill(name) {
+        if (confirm(`Czy usunąć "${name}" ze wszystkich miesięcy?`)) {
+            const updatedList = globalRegisteredBills.filter(b => b !== name);
+            set(ref(db, 'registered_bills'), updatedList);
         }
     }
 
-    // Aktualizacja kwoty w pamięci podręcznej dla wybranego miesiąca
-    window.updateAmount = function(billId, value) {
-        let data = loadMonthData();
-        if (!data[billId]) data[billId] = { amount: '', paid: false };
-        data[billId].amount = value;
-        saveMonthData(data);
+    function updateAmount(billId, value) {
+        update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+            amount: value
+        });
     }
 
-    // Zmiana statusu opłacenia (kolor czerwony <-> zielony)
-    window.togglePaid = function(billId, isChecked) {
-        let data = loadMonthData();
-        if (!data[billId]) data[billId] = { amount: '', paid: false };
-        data[billId].paid = isChecked;
-        saveMonthData(data);
-
-        const card = document.getElementById(`card-${billId}`);
-        if (isChecked) {
-            card.classList.add('paid');
-        } else {
-            card.classList.remove('paid');
-        }
+    function togglePaid(billId, isChecked) {
+        update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+            paid: isChecked
+        });
     }
 
-    // Przełączenie miesiąca w rozwijanej liście u góry
-    monthSelect.addEventListener('change', renderBills);
+    // Zmiana miesiąca przełącza nasłuchiwanie na inną gałąź w bazie
+    monthSelect.addEventListener('change', listenToMonthData);
+    newBillNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewBill(); });
 
-    // Pierwsze uruchomienie aplikacji
-    renderBills();
+    // Start nasłuchiwania dla domyślnego miesiąca
+    listenToMonthData();
 </script>
 
 </body>
