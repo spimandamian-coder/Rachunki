@@ -1,212 +1,3 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menedżer Rachunków Realtime</title>
-    <style>
-        :root {
-            --bg-color: #f4f7f6;
-            --card-bg: #ffffff;
-            --text-color: #333333;
-            --unpaid-color: #ffebee;
-            --unpaid-border: #ef5350;
-            --paid-color: #e8f5e9;
-            --paid-border: #66bb6a;
-            --primary-color: #3498db;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        h1 {
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-
-        .month-selector {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        select {
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .bills-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-
-        .bill-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border-left: 8px solid var(--unpaid-border);
-            background-color: var(--unpaid-color);
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .bill-card.paid {
-            border-left-color: var(--paid-border);
-            background-color: var(--paid-color);
-        }
-
-        .bill-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #2c3e50;
-            padding-right: 25px;
-        }
-
-        .input-group {
-            margin-bottom: 15px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #7f8c8d;
-            margin-bottom: 5px;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .checkbox-group input {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-        }
-
-        .add-bill-panel {
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border-top: 4px solid var(--primary-color);
-            margin-top: 20px;
-        }
-
-        .add-bill-panel h2 {
-            margin-top: 0;
-            font-size: 20px;
-            color: #2c3e50;
-        }
-
-        .add-form {
-            display: flex;
-            gap: 10px;
-        }
-
-        .add-form input {
-            flex: 1;
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        }
-
-        .add-form button {
-            padding: 12px 24px;
-            font-size: 16px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-
-        .add-form button:hover {
-            background-color: #2980b9;
-        }
-
-        .delete-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: none;
-            border: none;
-            color: #bdc3c7;
-            font-size: 18px;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .delete-btn:hover {
-            color: #e74c3c;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <header>
-        <h1>Wykaz Rachunków (Realtime)</h1>
-        <div class="month-selector">
-            <label for="monthSelect">Wybierz miesiąc: </label>
-            <select id="monthSelect"></select>
-        </div>
-    </header>
-
-    <div class="bills-grid" id="billsGrid">Ladowanie danych z bazy...</div>
-
-    <div class="add-bill-panel">
-        <h2>Dodaj nową opłatę do wykazu</h2>
-        <div class="add-form">
-            <input type="text" id="newBillName" placeholder="Np. Prąd garaż, Abonament HBO...">
-            <button onclick="addNewBill()">Dodaj opłatę</button>
-        </div>
-    </div>
-</div>
-
 <!-- Import skryptów Firebase z sieci (wersja modułowa) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -215,15 +6,15 @@
     // ----------------------------------------------------
     // TUTAJ WKLEJ SWÓJ OBIEKT CONFIG Z FIREBASE:
     const firebaseConfig = {
-  apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
-  authDomain: "rachunki-realtime.firebaseapp.com",
-  databaseURL: "https://rachunki-realtime-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "rachunki-realtime",
-  storageBucket: "rachunki-realtime.firebasestorage.app",
-  messagingSenderId: "1024588826825",
-  appId: "1:1024588826825:web:bcba5bb7172aaf9eafa518",
-  measurementId: "G-FLVENSC5TG"
-};
+        apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
+        authDomain: "rachunki-realtime.firebaseapp.com",
+        databaseURL: "https://rachunki-realtime-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "rachunki-realtime",
+        storageBucket: "rachunki-realtime.firebasestorage.app",
+        messagingSenderId: "1024588826825",
+        appId: "1:1024588826825:web:bcba5bb7172aaf9eafa518",
+        measurementId: "G-FLVENSC5TG"
+    };
     // ----------------------------------------------------
 
     // Inicjalizacja Firebase
@@ -255,7 +46,6 @@
     });
     monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
-    // Zmienne przechowujące aktualny stan pobrany z bazy
     let globalRegisteredBills = [];
     let currentMonthData = {};
 
@@ -268,32 +58,33 @@
         if (data) {
             globalRegisteredBills = data;
         } else {
-            // Jeśli baza jest pusta, uzupełnij ją domyślnymi
             globalRegisteredBills = defaultBills;
             set(billsListRef, defaultBills);
         }
-        syncAndRender();
+        rebuildGridStructure(); // Buduj siatkę tylko wtedy, gdy zmienia się lista rachunków
     });
 
     // 2. Słuchaj zmian dla wybranego miesiąca
+    let currentMonthListener = null;
     function listenToMonthData() {
         const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
+        
+        // Wyczyszczenie poprzedniego nasłuchiwania przy zmianie miesiąca (jeśli istnieje)
         onValue(monthDataRef, (snapshot) => {
             currentMonthData = snapshot.val() || {};
-            syncAndRender();
+            updateLiveValues(); // Aktualizuj tylko wartości pól, bez przebudowywania HTML
         });
     }
 
-    // Wywołaj renderowanie przy każdej zmianie struktury lub danych
-    function syncAndRender() {
+    // Funkcja wywoływana rzadziej – tylko przy dodaniu/usunięciu rachunku lub zmianie miesiąca
+    function rebuildGridStructure() {
         billsGrid.innerHTML = '';
         
         globalRegisteredBills.forEach(name => {
             const billId = encodeURIComponent(name.toLowerCase().replace(/\s+/g, '_'));
-            const billData = currentMonthData[billId] || { amount: '', paid: false };
-
+            
             const card = document.createElement('div');
-            card.className = `bill-card ${billData.paid ? 'paid' : ''}`;
+            card.className = `bill-card`;
             card.id = `card-${billId}`;
 
             card.innerHTML = `
@@ -301,20 +92,51 @@
                 <h3 class="bill-title">${name}</h3>
                 <div class="input-group">
                     <label>Kwota (zł):</label>
-                    <input type="number" step="0.01" class="amount-input" data-id="${billId}" value="${billData.amount}" placeholder="0.00">
+                    <input type="number" step="0.01" class="amount-input" data-id="${billId}" placeholder="0.00">
                 </div>
                 <label class="checkbox-group">
-                    <input type="checkbox" class="paid-checkbox" data-id="${billId}" ${billData.paid ? 'checked' : ''}>
+                    <input type="checkbox" class="paid-checkbox" data-id="${billId}">
                     Opłacone
                 </label>
             `;
 
-            // Dynamiczne podpięcie eventów bezpośrednio w kodzie JS (wymagane w type="module")
             card.querySelector('.delete-btn').addEventListener('click', () => removeBill(name));
             card.querySelector('.amount-input').addEventListener('input', (e) => updateAmount(billId, e.target.value));
             card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
 
             billsGrid.appendChild(card);
+        });
+        
+        // Po zbudowaniu struktury, uzupełnij ją aktualnymi danymi
+        updateLiveValues();
+    }
+
+    // KLUCZOWA POPRAWKA: Ta funkcja podmienia dane w polach bez niszczenia elementów DOM
+    function updateLiveValues() {
+        globalRegisteredBills.forEach(name => {
+            const billId = encodeURIComponent(name.toLowerCase().replace(/\s+/g, '_'));
+            const billData = currentMonthData[billId] || { amount: '', paid: false };
+            
+            const card = document.getElementById(`card-${billId}`);
+            if (!card) return;
+
+            const amountInput = card.querySelector('.amount-input');
+            const paidCheckbox = card.querySelector('.paid-checkbox');
+
+            // Aktualizuj kwotę tylko wtedy, gdy użytkownik nie ma na niej aktywnego focusu
+            if (document.activeElement !== amountInput) {
+                amountInput.value = billData.amount;
+            }
+
+            // Aktualizuj checkbox
+            paidCheckbox.checked = billData.paid;
+
+            // Aktualizuj style karty (kolor czerwony/zielony)
+            if (billData.paid) {
+                card.classList.add('paid');
+            } else {
+                card.classList.remove('paid');
+            }
         });
     }
 
@@ -351,13 +173,13 @@
         });
     }
 
-    // Zmiana miesiąca przełącza nasłuchiwanie na inną gałąź w bazie
-    monthSelect.addEventListener('change', listenToMonthData);
+    // Zmiana miesiąca wymusza przebudowę i zmianę nasłuchiwania
+    monthSelect.addEventListener('change', () => {
+        listenToMonthData();
+    });
+    
     newBillNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewBill(); });
 
-    // Start nasłuchiwania dla domyślnego miesiąca
+    // Start
     listenToMonthData();
 </script>
-
-</body>
-</html>
