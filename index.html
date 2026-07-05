@@ -284,6 +284,12 @@
 
             billsGrid.innerHTML = '';
             
+            // ZMIANA LOGIKI: Jeśli cały miesiąc został oznaczony jako wyczyszczony/pusty, nie renderujemy domyślnych kafli.
+            if (currentMonthData && currentMonthData.__status === 'cleared') {
+                updateLiveValues();
+                return;
+            }
+
             globalRegisteredBills.forEach((name, index) => {
                 const billId = createBillId(name);
                 const billData = currentMonthData[billId] || { amount: '', paid: false };
@@ -344,6 +350,13 @@
             let paidSum = 0;
             let unpaidSum = 0;
 
+            if (currentMonthData && currentMonthData.__status === 'cleared') {
+                totalPaidSpan.textContent = "0.00";
+                totalUnpaidSpan.textContent = "0.00";
+                drawChart(0, 0);
+                return;
+            }
+
             globalRegisteredBills.forEach(name => {
                 const billId = createBillId(name);
                 const billData = currentMonthData[billId] || { amount: 0, paid: false };
@@ -362,6 +375,11 @@
         }
 
         function updateLiveValues() {
+            if (currentMonthData && currentMonthData.__status === 'cleared') {
+                calculateTotals();
+                return;
+            }
+
             globalRegisteredBills.forEach(name => {
                 const billId = createBillId(name);
                 const billData = currentMonthData[billId] || { amount: '', paid: false };
@@ -408,7 +426,7 @@
             }
 
             const prevMonthKey = `${year}-${monthIdx}`;
-            if (confirm(`Czy chcesz skopiować wszystkie kwoty oraz usunięte karty z miesiąca ${months[monthIdx]} ${year}?`)) {
+            if (confirm(`Czy chcesz skopiować wszystkie kwoty oraz zestaw kart z miesiąca ${months[monthIdx]} ${year}?`)) {
                 const prevMonthRef = ref(db, `months_data/${prevMonthKey}`);
                 const snapshot = await get(prevMonthRef);
                 if (snapshot.exists()) {
@@ -421,29 +439,47 @@
             }
         });
 
-        // NOWA METODA: Czyszczenie danych dla wybranego miesiąca w Firebase
+        // POPRAWIONA METODA: Teraz oznacza miesiąc statusem 'cleared' i ukrywa absolutnie wszystko
         clearMonthBtn.addEventListener('click', async () => {
             const currentVal = monthSelect.value;
             const parts = currentVal.split('-');
             const year = parts[0];
             const monthIdx = parseInt(parts[1]);
 
-            if (confirm(`⚠️ CZY NA PEWNO CHCESZ WYCZYŚCIĆ CAŁY MIESIĄC?\n\nSpowoduje to wyzerowanie kwot, statusów płatności i przywrócenie wszystkich usuniętych kart w miesiącu: ${months[monthIdx]} ${year}.`)) {
+            if (confirm(`⚠️ CZY NA PEWNO CHCESZ WYCZYŚCIĆ CAŁY MIESIĄC?\n\nSpowoduje to całkowite USUNIĘCIE WSZYSTKICH KAFELKÓW, ich nazw oraz kwot w miesiącu: ${months[monthIdx]} ${year}. Ekran będzie pusty.`)) {
                 const monthDataRef = ref(db, `months_data/${currentVal}`);
-                await set(monthDataRef, null); // Usunięcie gałęzi miesiąca w bazie resetuje stan do domyślnego
-                alert("Miesiąc został wyczyszczony!");
+                
+                // Zamiast kasować do zera (co wywoływało ładowanie domyślnych), ustawiamy status czystej karty
+                await set(monthDataRef, { __status: 'cleared' }); 
+                alert("Miesiąc został całkowicie wyczyszczony!");
             }
         });
 
         window.addNewBill = function() {
             const name = newBillNameInput.value.trim();
             if (!name) return;
-            if (globalRegisteredBills.includes(name)) {
-                alert("Taki rachunek już istnieje!");
-                return;
+            
+            const billId = createBillId(name);
+
+            // Jeśli miesiąc był wcześniej oznaczony jako wyczyszczony (pusty), usuwamy flagę czyszczenia przy dodaniu pierwszego nowego kafelka
+            if (currentMonthData && currentMonthData.__status === 'cleared') {
+                const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
+                set(monthDataRef, {
+                    [billId]: { amount: '', paid: false }
+                });
+            } else {
+                // Jeśli kafelka nie ma na liście ogólnej, dodajemy go
+                if (!globalRegisteredBills.includes(name)) {
+                    globalRegisteredBills.push(name);
+                    set(ref(db, 'registered_bills'), globalRegisteredBills);
+                }
+                // Aktywujemy kafelek w tym miesiącu (na wypadek gdyby miał status 'removed')
+                update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+                    status: 'active',
+                    amount: '',
+                    paid: false
+                });
             }
-            globalRegisteredBills.push(name);
-            set(ref(db, 'registered_bills'), globalRegisteredBills);
             newBillNameInput.value = '';
         }
 
