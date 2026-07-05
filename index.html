@@ -12,6 +12,7 @@
             --text-muted: #6c757d;
             --border-color: #dee2e6;
             --shadow: 0 4px 6px rgba(0,0,0,0.05);
+            --modal-overlay: rgba(0, 0, 0, 0.4);
         }
         [data-theme="dark"] {
             --bg-primary: #121212;
@@ -20,6 +21,7 @@
             --text-muted: #a0a0a0;
             --border-color: #333333;
             --shadow: 0 4px 6px rgba(0,0,0,0.3);
+            --modal-overlay: rgba(0, 0, 0, 0.7);
         }
         body {
             background-color: var(--bg-primary);
@@ -91,6 +93,58 @@
             width: 120px;
             height: 120px;
         }
+        
+        /* STYLE DLA OKNA MODALNEGO LOGÓW */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--modal-overlay);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 650px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.2s ease-out;
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .log-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .log-item:last-child { border-bottom: none; }
+        .log-time {
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-right: 10px;
+            font-family: monospace;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -104,9 +158,12 @@
     <!-- DASHBOARD Z WYKRESEM -->
     <div class="dashboard-box">
         <div style="display: flex; flex-direction: column; gap: 15px;">
-            <div>
-                <label for="monthSelect" style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 5px; color: var(--text-muted);">WYBIERZ MIESIĄC</label>
-                <select id="monthSelect" class="input-style" style="font-size: 16px; font-weight: 600; width: 200px;"></select>
+            <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                <div>
+                    <label for="monthSelect" style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 5px; color: var(--text-muted);">WYBIERZ MIESIĄC</label>
+                    <select id="monthSelect" class="input-style" style="font-size: 16px; font-weight: 600; width: 200px;"></select>
+                </div>
+                <button id="openLogsBtn" class="btn btn-secondary" style="background-color: #6f42c1; color: white; padding: 10px 15px;">📜 Historia zmian</button>
             </div>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <button id="copyPrevMonthBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; background-color: transparent; border: 1px solid #007bff; color: #007bff;">📋 Kopiuj kwoty z poprz. miesiąca</button>
@@ -141,10 +198,23 @@
     <div id="billsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;"></div>
 </div>
 
+<!-- OKNO MODALNE (HISTORIA LOGÓW) -->
+<div id="logsModal" class="modal-backdrop">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="margin: 0; font-size: 20px; font-weight: 700;">📜 Pełna historia operacji</h2>
+            <button id="closeLogsBtn" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--text-main); line-height: 1;">&times;</button>
+        </div>
+        <div id="modalLogBody" class="modal-body">
+            <div style="text-align: center; color: var(--text-muted);">Ładowanie historii logów...</div>
+        </div>
+    </div>
+</div>
+
 <!-- SKRYPT FIREBASE + LOGIKA -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue, update, get, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
@@ -193,6 +263,12 @@
         const clearMonthBtn = document.getElementById('clearMonthBtn');
         const canvas = document.getElementById('miniChart');
         const ctx = canvas.getContext('2d');
+        
+        // Modal logów elementy
+        const logsModal = document.getElementById('logsModal');
+        const openLogsBtn = document.getElementById('openLogsBtn');
+        const closeLogsBtn = document.getElementById('closeLogsBtn');
+        const modalLogBody = document.getElementById('modalLogBody');
 
         let debounceTimer;
 
@@ -219,10 +295,27 @@
         monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
         let globalRegisteredBills = [];
-        let currentMonthData = null; // Zmienione na null, aby odróżnić brak danych od pustego obiektu
+        let currentMonthData = null;
 
         function createBillId(name) {
             return encodeURIComponent(name.toLowerCase().trim().replace(/\s+/g, '_'));
+        }
+
+        function getFriendlyMonthName(monthValue) {
+            const parts = monthValue.split('-');
+            return `${months[parseInt(parts[1])]} ${parts[0]}`;
+        }
+
+        // FUNKCJA ZAPISUJĄCA LOGI DO FIREBASE
+        function logEvent(message) {
+            const logsRef = ref(db, 'operation_logs');
+            const now = new Date();
+            const timestamp = now.toLocaleDateString('pl-PL') + ' ' + now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            push(logsRef, {
+                timestamp: timestamp,
+                message: message
+            });
         }
 
         const billsListRef = ref(db, 'registered_bills');
@@ -240,7 +333,7 @@
         function listenToMonthData() {
             const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
             onValue(monthDataRef, (snapshot) => {
-                currentMonthData = snapshot.val(); // Zwróci null jeśli gałąź nie istnieje (miesiąc wyczyszczony)
+                currentMonthData = snapshot.val();
                 rebuildGridStructure();
             });
         }
@@ -284,22 +377,16 @@
 
             billsGrid.innerHTML = '';
             
-            // KLUCZOWA ZMIANA: Jeśli w bazie nie ma ŻADNYCH danych dla tego miesiąca (został wyczyszczony), 
-            // nie renderujemy niczego. Ekran pozostaje idealnie czysty.
             if (!currentMonthData) {
                 updateLiveValues();
                 return;
             }
 
-            // Renderujemy tylko te kafelki, które fizycznie znajdują się w danych wybranego miesiąca
             Object.keys(currentMonthData).forEach((billId) => {
                 const billData = currentMonthData[billId];
                 if (!billData || billData.status === 'removed') return;
 
-                // Próbujemy znaleźć oryginalną nazwę w rejestrze lub używamy zdekodowanego ID jako zapas
                 let name = globalRegisteredBills.find(n => createBillId(n) === billId) || decodeURIComponent(billId).replace(/_/g, ' ');
-                
-                // Zapewniamy wielką literę na początku dla ładnego wyglądu
                 name = name.charAt(0).toUpperCase() + name.slice(1);
 
                 const icon = getBillIcon(name);
@@ -327,15 +414,21 @@
                 card.querySelector('.delete-btn').addEventListener('click', () => removeBillFromCurrentMonth(name));
                 
                 card.querySelector('.amount-input').addEventListener('input', (e) => {
+                    const oldVal = billData.amount || '0.00';
+                    const newVal = e.target.value;
                     clearTimeout(debounceTimer);
                     debounceTimer = setTimeout(() => {
-                        updateAmount(billId, e.target.value);
+                        updateAmount(billId, newVal);
+                        logEvent(`[${getFriendlyMonthName(monthSelect.value)}] Zmieniono kwotę rachunku "${name}" z ${oldVal} zł na ${newVal || '0.00'} zł`);
                     }, 500); 
                 });
 
-                card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
+                card.querySelector('.paid-checkbox').addEventListener('change', (e) => {
+                    togglePaid(billId, e.target.checked);
+                    logEvent(`[${getFriendlyMonthName(monthSelect.value)}] Oznaczono rachunek "${name}" jako ${e.target.checked ? 'OPŁACONY' : 'NIEOPŁACONY'}`);
+                });
+                
                 card.querySelector('.name-input').addEventListener('change', (e) => {
-                    // Znajdujemy indeks w globalnej tablicy
                     const idx = globalRegisteredBills.findIndex(n => createBillId(n) === billId);
                     updateBillName(idx >= 0 ? idx : globalRegisteredBills.length, name, e.target.value);
                 });
@@ -438,6 +531,7 @@
                 if (snapshot.exists()) {
                     const prevData = snapshot.val();
                     await set(ref(db, `months_data/${currentVal}`), prevData);
+                    logEvent(`[${getFriendlyMonthName(currentVal)}] Skopiowano strukturę i kwoty z miesiąca ${months[monthIdx]} ${year}`);
                     alert("Dane miesiąca zostały pomyślnie skopiowane!");
                 } else {
                     alert("Nie znaleziono danych z poprzedniego miesiąca do skopiowania.");
@@ -445,16 +539,12 @@
             }
         });
 
-        // DZIAŁAJĄCE CZYSZCZENIE: Usunięcie węzła w bazie sprawia, że interfejs staje się idealnie pusty
         clearMonthBtn.addEventListener('click', async () => {
             const currentVal = monthSelect.value;
-            const parts = currentVal.split('-');
-            const year = parts[0];
-            const monthIdx = parseInt(parts[1]);
-
-            if (confirm(`⚠️ CZY NA PEWNO CHCESZ WYCZYŚCIĆ CAŁY MIESIĄC?\n\nSpowoduje to całkowite USUNIĘCIE WSZYSTKICH KAFELKÓW (nazw i kwot) w miesiącu: ${months[monthIdx]} ${year}.\nEkran będzie całkowicie pusty.`)) {
+            if (confirm(`⚠️ CZY NA PEWNO CHCESZ WYCZYŚCIĆ CAŁY MIESIĄC?\n\nSpowoduje to całkowite USUNIĘCIE WSZYSTKICH KAFELKÓW (nazw i kwot) w miesiącu: ${getFriendlyMonthName(currentVal)}.\nEkran będzie całkowicie pusty.`)) {
                 const monthDataRef = ref(db, `months_data/${currentVal}`);
                 await set(monthDataRef, null); 
+                logEvent(`[${getFriendlyMonthName(currentVal)}] Całkowicie wyczyszczono miesiąc (usunięto wszystkie kafelki)`);
                 alert("Miesiąc został całkowicie wyczyszczony!");
             }
         });
@@ -470,13 +560,13 @@
                 set(ref(db, 'registered_bills'), globalRegisteredBills);
             }
 
-            // Dodajemy lub aktywujemy kafelek bezpośrednio w wybranym miesiącu
             update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
                 status: 'active',
                 amount: '',
                 paid: false
             });
             
+            logEvent(`[${getFriendlyMonthName(monthSelect.value)}] Dodano nowy rachunek: "${name}"`);
             newBillNameInput.value = '';
         }
 
@@ -499,13 +589,14 @@
                 globalRegisteredBills[index] = cleanedNewName;
                 set(ref(db, 'registered_bills'), globalRegisteredBills);
             }
+            logEvent(`Zmieniono nazwę szablonu rachunku z "${oldName}" na "${cleanedNewName}"`);
         }
 
         function removeBillFromCurrentMonth(name) {
             const billId = createBillId(name);
             if (confirm(`Czy usunąć rachunek "${name}" TYLKO z wybranego miesiąca?`)) {
-                // Całkowicie usuwamy z mapy wybranego miesiąca
                 set(ref(db, `months_data/${monthSelect.value}/${billId}`), null);
+                logEvent(`[${getFriendlyMonthName(monthSelect.value)}] Usunięto kafelek rachunku: "${name}"`);
             }
         }
 
@@ -520,6 +611,38 @@
                 paid: isChecked
             });
         }
+
+        // --- OBSŁUGA OKIENKA MODALNEGO LOGÓW ---
+        openLogsBtn.addEventListener('click', () => {
+            logsModal.style.display = 'flex';
+            modalLogBody.innerHTML = '<div style="text-align: center; color: var(--text-muted);">Pobieranie historii z bazy...</div>';
+            
+            const logsRef = ref(db, 'operation_logs');
+            get(logsRef).then((snapshot) => {
+                modalLogBody.innerHTML = '';
+                const data = snapshot.val();
+                
+                if (!data) {
+                    modalLogBody.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Brak wpisów w historii.</div>';
+                    return;
+                }
+                
+                // Konwertujemy obiekt na tablicę i sortujemy od najnowszych
+                const logsList = Object.keys(data).map(key => data[key]).reverse();
+                
+                logsList.forEach(log => {
+                    const logRow = document.createElement('div');
+                    logRow.className = 'log-item';
+                    logRow.innerHTML = `<span class="log-time">[${log.timestamp}]</span> <span class="log-msg">${log.message}</span>`;
+                    modalLogBody.appendChild(logRow);
+                });
+            }).catch(err => {
+                modalLogBody.innerHTML = `<div style="text-align: center; color: #c62828; padding: 20px;">Błąd pobierania logów: ${err.message}</div>`;
+            });
+        });
+
+        closeLogsBtn.addEventListener('click', () => logsModal.style.display = 'none');
+        window.addEventListener('click', (e) => { if (e.target === logsModal) logsModal.style.display = 'none'; });
 
         monthSelect.addEventListener('change', () => {
             listenToMonthData();
