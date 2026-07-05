@@ -1,941 +1,492 @@
 <!DOCTYPE html>
-
 <html lang="pl">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Moje Rachunki - Dashboard</title>
-
     <style>
-
         :root {
-
             --bg-primary: #f8f9fa;
-
             --bg-card: #ffffff;
-
             --text-main: #212529;
-
             --text-muted: #6c757d;
-
             --border-color: #dee2e6;
-
             --shadow: 0 4px 6px rgba(0,0,0,0.05);
-
         }
-
         [data-theme="dark"] {
-
             --bg-primary: #121212;
-
             --bg-card: #1e1e1e;
-
             --text-main: #f8f9fa;
-
             --text-muted: #a0a0a0;
-
             --border-color: #333333;
-
             --shadow: 0 4px 6px rgba(0,0,0,0.3);
-
         }
-
         body {
-
             background-color: var(--bg-primary);
-
             color: var(--text-main);
-
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-
             transition: background-color 0.3s, color 0.3s;
-
             margin: 0;
-
             padding: 0;
-
         }
-
         .container {
-
             max-width: 1200px;
-
             margin: 0 auto;
-
             padding: 30px 20px;
-
         }
-
         .header-zone {
-
             display: flex;
-
             justify-content: space-between;
-
             align-items: center;
-
             margin-bottom: 30px;
-
         }
-
         .dashboard-box {
-
             background: var(--bg-card);
-
             border-radius: 16px;
-
             padding: 24px;
-
             box-shadow: var(--shadow);
-
             border: 1px solid var(--border-color);
-
             margin-bottom: 30px;
-
             display: flex;
-
             align-items: center;
-
             justify-content: space-between;
-
             flex-wrap: wrap;
-
             gap: 30px;
-
         }
-
         .bill-card {
-
             background: var(--bg-card);
-
             border: 1px solid var(--border-color);
-
             border-radius: 14px;
-
             padding: 20px;
-
             position: relative;
-
             box-shadow: var(--shadow);
-
             transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s;
-
         }
-
         .bill-card:hover {
-
             transform: translateY(-2px);
-
             box-shadow: 0 6px 12px rgba(0,0,0,0.08);
-
         }
-
         .btn {
-
             padding: 10px 20px;
-
             font-size: 14px;
-
             font-weight: 600;
-
             cursor: pointer;
-
             border-radius: 8px;
-
             border: none;
-
             transition: opacity 0.2s;
-
         }
-
         .btn:hover { opacity: 0.9; }
-
         .btn-primary { background-color: #007bff; color: white; }
-
         .btn-secondary { background-color: #6c757d; color: white; }
-
         .input-style {
-
             padding: 10px;
-
             background: var(--bg-card);
-
             color: var(--text-main);
-
             border: 1px solid var(--border-color);
-
             border-radius: 8px;
-
             outline: none;
-
         }
-
         .chart-container {
-
             position: relative;
-
             width: 120px;
-
             height: 120px;
-
         }
-
     </style>
-
 </head>
-
 <body>
 
-
-
 <div class="container">
-
     <div class="header-zone">
-
         <h1 style="margin: 0; font-weight: 700; font-size: 28px;">🎛️ FinanseDomowe</h1>
-
         <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
-
     </div>
-
     
-
     <!-- DASHBOARD Z WYKRESEM -->
-
     <div class="dashboard-box">
-
         <div style="display: flex; flex-direction: column; gap: 15px;">
-
             <div>
-
                 <label for="monthSelect" style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 5px; color: var(--text-muted);">WYBIERZ MIESIĄC</label>
-
                 <select id="monthSelect" class="input-style" style="font-size: 16px; font-weight: 600; width: 200px;"></select>
-
             </div>
-
             <button id="copyPrevMonthBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; background-color: transparent; border: 1px solid #007bff; color: #007bff;">📋 Kopiuj kwoty z poprz. miesiąca</button>
-
         </div>
-
         
-
         <div style="display: flex; gap: 40px; flex-wrap: wrap;">
-
             <div style="display: flex; flex-direction: column; justify-content: center;">
-
                 <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">OPŁACONE</span>
-
                 <span style="color: #2e7d32; font-size: 24px; font-weight: 700;"><span id="totalPaid">0.00</span> zł</span>
-
             </div>
-
             <div style="display: flex; flex-direction: column; justify-content: center;">
-
                 <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">DO ZAPŁATY</span>
-
                 <span style="color: #c62828; font-size: 24px; font-weight: 700;"><span id="totalUnpaid">0.00</span> zł</span>
-
             </div>
-
         </div>
-
-
 
         <!-- DYNAMICZNY GADŻET: WYKRES -->
-
         <div class="chart-container">
-
             <canvas id="miniChart" width="120" height="120"></canvas>
-
         </div>
-
     </div>
-
-
 
     <!-- PANELE AKCJI -->
-
     <div style="margin-bottom: 30px; display: flex; gap: 10px; flex-wrap: wrap;">
-
         <input type="text" id="newBillName" placeholder="Nazwa nowego rachunku np. Prąd Armii..." class="input-style" style="width: 300px; font-size: 15px;">
-
         <button onclick="window.addNewBill()" class="btn btn-primary">➕ Dodaj rachunek</button>
-
     </div>
 
-
-
     <!-- SIATKA RACHUNKÓW -->
-
     <div id="billsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;"></div>
-
 </div>
 
-
-
 <!-- SKRYPT FIREBASE + LOGIKA -->
-
 <script type="module">
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-
     import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-
-
     const firebaseConfig = {
-
         apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
-
         authDomain: "rachunki-realtime.firebaseapp.com",
-
         databaseURL: "https://rachunki-realtime-default-rtdb.europe-west1.firebasedatabase.app",
-
         projectId: "rachunki-realtime",
-
         storageBucket: "rachunki-realtime.firebasestorage.app",
-
         messagingSenderId: "1024588826825",
-
         appId: "1:1024588826825:web:bcba5bb7172aaf9eafa518",
-
         measurementId: "G-FLVENSC5TG"
-
     };
 
-
-
     const app = initializeApp(firebaseConfig);
-
     const db = getDatabase(app);
 
-
-
     const defaultBills = [
-
         "Internet Play", "Woda Tuwima", "Czynsz Tuwima", "Czynsz Armii",
-
         "Fundusz Remontowy", "Gaz Tuwima", "Gaz Armii", "Prad Tuwima",
-
         "Prad Armii", "Prad dzialka", "Treninigi", "Obiady"
-
     ];
-
-
 
     const months = [
-
         "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
-
         "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"
-
     ];
 
-
-
-    // Funkcja inteligentnego dobierania ikon do kategorii
-
     function getBillIcon(name) {
-
         const lower = name.toLowerCase();
-
         if (lower.includes('prad') || lower.includes('energia')) return '⚡';
-
         if (lower.includes('gaz')) return '🔥';
-
         if (lower.includes('czynsz') || lower.includes('fundusz')) return '🏠';
-
         if (lower.includes('woda')) return '💧';
-
         if (lower.includes('internet') || lower.includes('play') || lower.includes('net')) return '🌐';
-
         if (lower.includes('trening') || lower.includes('obiad') || lower.includes('natan')) return '⚽';
-
         return '📄';
-
     }
 
-
-
     document.addEventListener("DOMContentLoaded", () => {
-
         const monthSelect = document.getElementById('monthSelect');
-
         const billsGrid = document.getElementById('billsGrid');
-
         const newBillNameInput = document.getElementById('newBillName');
-
         const totalPaidSpan = document.getElementById('totalPaid');
-
         const totalUnpaidSpan = document.getElementById('totalUnpaid');
-
         const themeToggle = document.getElementById('themeToggle');
-
         const copyPrevMonthBtn = document.getElementById('copyPrevMonthBtn');
-
         const canvas = document.getElementById('miniChart');
-
         const ctx = canvas.getContext('2d');
 
-
-
-        // Dark Mode switch
+        // Licznik dla mechanizmu debouncingu (opóźnienia wysyłki kwot)
+        let debounceTimer;
 
         themeToggle.addEventListener('click', () => {
-
             const currentTheme = document.documentElement.getAttribute('data-theme');
-
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
             document.documentElement.setAttribute('data-theme', newTheme);
-
             themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-
             drawChart(parseFloat(totalPaidSpan.textContent), parseFloat(totalUnpaidSpan.textContent));
-
         });
-
-
 
         const currentYear = new Date().getFullYear();
-
         const yearsToGenerate = [currentYear, currentYear + 1];
 
-
-
         yearsToGenerate.forEach(year => {
-
             months.forEach((month, index) => {
-
                 let option = document.createElement('option');
-
                 option.value = `${year}-${index}`;
-
                 option.textContent = `${month} ${year}`;
-
                 monthSelect.appendChild(option);
-
             });
-
         });
-
         
-
-        // Start od bieżącego miesiąca (Lipiec 2026)
-
         monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
-
-
         let globalRegisteredBills = [];
-
         let currentMonthData = {};
 
-
-
         function createBillId(name) {
-
             return encodeURIComponent(name.toLowerCase().trim().replace(/\s+/g, '_'));
-
         }
-
-
-
-        // Realtime Słuchacz Listy Głównej
 
         const billsListRef = ref(db, 'registered_bills');
-
         onValue(billsListRef, (snapshot) => {
-
             const data = snapshot.val();
-
             if (data) {
-
                 globalRegisteredBills = data;
-
             } else {
-
                 globalRegisteredBills = defaultBills;
-
                 set(billsListRef, defaultBills);
-
             }
-
             rebuildGridStructure(); 
-
         });
 
-
-
         function listenToMonthData() {
-
             const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
-
             onValue(monthDataRef, (snapshot) => {
-
                 currentMonthData = snapshot.val() || {};
-
                 rebuildGridStructure();
-
             });
-
         }
 
-
-
-        // Rysowanie wykresu kołowego na Canvasie
-
         function drawChart(paid, unpaid) {
-
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             const total = paid + unpaid;
-
             if (total === 0) {
-
                 ctx.beginPath();
-
                 ctx.arc(60, 60, 50, 0, 2 * Math.PI);
-
                 ctx.fillStyle = '#cccccc';
-
                 ctx.fill();
-
                 return;
-
             }
-
-
 
             const paidAngle = (paid / total) * 2 * Math.PI;
 
-
-
-            // Opłacone (Zielony)
-
             ctx.beginPath();
-
             ctx.moveTo(60, 60);
-
             ctx.arc(60, 60, 55, 0, paidAngle);
-
             ctx.fillStyle = '#2e7d32';
-
             ctx.fill();
 
-
-
-            // Do zapłaty (Czerwony)
-
             ctx.beginPath();
-
             ctx.moveTo(60, 60);
-
             ctx.arc(60, 60, 55, paidAngle, 2 * Math.PI);
-
             ctx.fillStyle = '#c62828';
-
             ctx.fill();
-
-
-
-            // Wycięcie środka (Donut Chart)
 
             ctx.beginPath();
-
             ctx.arc(60, 60, 38, 0, 2 * Math.PI);
-
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
             ctx.fillStyle = isDark ? '#1e1e1e' : '#ffffff';
-
             ctx.fill();
-
         }
-
-
 
         function rebuildGridStructure() {
+            // Zapisujemy ID aktualnie klikniętego elementu oraz pozycję kursora
+            const activeElementId = document.activeElement ? document.activeElement.id : null;
+            const selectionStart = document.activeElement ? document.activeElement.selectionStart : null;
+            const selectionEnd = document.activeElement ? document.activeElement.selectionEnd : null;
 
             billsGrid.innerHTML = '';
-
             
-
             globalRegisteredBills.forEach((name, index) => {
-
                 const billId = createBillId(name);
-
                 const billData = currentMonthData[billId] || { amount: '', paid: false };
-
                 
-
                 if (billData.status === 'removed') return; 
-
                 
-
                 const icon = getBillIcon(name);
-
                 const card = document.createElement('div');
-
                 card.className = `bill-card`;
-
                 card.id = `card-${billId}`;
-
                 card.style.border = "1px solid var(--border-color)";
 
-
-
                 card.innerHTML = `
-
                     <button class="delete-btn" style="position: absolute; top: 12px; right: 15px; background: none; border: none; font-size: 22px; cursor: pointer; color: #c62828; opacity: 0.6;">×</button>
-
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
-
                         <span style="font-size: 24px;">${icon}</span>
-
-                        <input type="text" class="name-input" value="${name}" style="font-weight: 600; font-size: 16px; border: none; background: transparent; color: var(--text-main); border-bottom: 1px dashed var(--border-color); width: 100%; padding-bottom: 2px;">
-
+                        <input type="text" id="name-${billId}" class="name-input" value="${name}" style="font-weight: 600; font-size: 16px; border: none; background: transparent; color: var(--text-main); border-bottom: 1px dashed var(--border-color); width: 100%; padding-bottom: 2px;">
                     </div>
-
                     <div style="margin-bottom: 15px;">
-
                         <label style="display:block; margin-bottom:5px; font-size: 12px; color: var(--text-muted); font-weight: 600;">KWOTA DO ZAPŁATY</label>
-
-                        <input type="number" step="0.01" class="amount-input" placeholder="0.00" class="input-style" style="padding: 8px; width: 85%; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-main);"> <span style="font-weight: 600;">zł</span>
-
+                        <input type="number" step="0.01" id="amount-${billId}" class="amount-input" placeholder="0.00" style="padding: 8px; width: 85%; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-main);"> <span style="font-weight: 600;">zł</span>
                     </div>
-
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
-
-                        <input type="checkbox" class="paid-checkbox" style="width: 18px; height: 18px; cursor: pointer;">
-
+                        <input type="checkbox" id="check-${billId}" class="paid-checkbox" style="width: 18px; height: 18px; cursor: pointer;">
                         Oznacz jako opłacony
-
                     </label>
-
                 `;
 
-
-
                 card.querySelector('.delete-btn').addEventListener('click', () => removeBillFromCurrentMonth(name));
-
-                card.querySelector('.amount-input').addEventListener('input', (e) => updateAmount(billId, e.target.value));
-
-                card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
-
-                card.querySelector('.name-input').addEventListener('change', (e) => updateBillName(index, name, e.target.value));
-
-
-
-                billsGrid.appendChild(card);
-
-            });
-
-            
-
-            updateLiveValues();
-
-        }
-
-
-
-        function calculateTotals() {
-
-            let paidSum = 0;
-
-            let unpaidSum = 0;
-
-
-
-            globalRegisteredBills.forEach(name => {
-
-                const billId = createBillId(name);
-
-                const billData = currentMonthData[billId] || { amount: 0, paid: false };
-
                 
-
-                if (billData.status === 'removed') return;
-
-                const amount = parseFloat(billData.amount) || 0;
-
-
-
-                if (billData.paid) paidSum += amount;
-
-                else unpaidSum += amount;
-
-            });
-
-
-
-            totalPaidSpan.textContent = paidSum.toFixed(2);
-
-            totalUnpaidSpan.textContent = unpaidSum.toFixed(2);
-
-            
-
-            drawChart(paidSum, unpaidSum);
-
-        }
-
-
-
-        function updateLiveValues() {
-
-            globalRegisteredBills.forEach(name => {
-
-                const billId = createBillId(name);
-
-                const billData = currentMonthData[billId] || { amount: '', paid: false };
-
-                
-
-                if (billData.status === 'removed') return;
-
-
-
-                const card = document.getElementById(`card-${billId}`);
-
-                if (!card) return;
-
-
-
-                const nameInput = card.querySelector('.name-input');
-
-                const amountInput = card.querySelector('.amount-input');
-
-                const paidCheckbox = card.querySelector('.paid-checkbox');
-
-
-
-                if (document.activeElement !== nameInput && nameInput) nameInput.value = name;
-
-                if (document.activeElement !== amountInput && amountInput) amountInput.value = billData.amount;
-
-                if (paidCheckbox) paidCheckbox.checked = billData.paid;
-
-
-
-                if (billData.paid) {
-
-                    card.style.backgroundColor = "rgba(46, 125, 50, 0.12)";
-
-                    card.style.borderColor = "#2e7d32";
-
-                } else {
-
-                    card.style.backgroundColor = "var(--bg-card)";
-
-                    card.style.borderColor = "var(--border-color)";
-
-                }
-
-            });
-
-
-
-            calculateTotals();
-
-        }
-
-
-
-        // PODPISANIE KROKU: Kopiowanie z poprzedniego miesiąca
-
-        copyPrevMonthBtn.addEventListener('click', async () => {
-
-            const currentVal = monthSelect.value;
-
-            const parts = currentVal.split('-');
-
-            let year = parseInt(parts[0]);
-
-            let monthIdx = parseInt(parts[1]);
-
-
-
-            if (monthIdx === 0) {
-
-                monthIdx = 11;
-
-                year -= 1;
-
-            } else {
-
-                monthIdx -= 1;
-
-            }
-
-
-
-            const prevMonthKey = `${year}-${monthIdx}`;
-
-            if (confirm(`Czy chcesz skopiować wszystkie kwoty oraz usunięte karty z miesiąca ${months[monthIdx]} ${year}?`)) {
-
-                const prevMonthRef = ref(db, `months_data/${prevMonthKey}`);
-
-                const snapshot = await get(prevMonthRef);
-
-                if (snapshot.exists()) {
-
-                    const prevData = snapshot.val();
-
-                    // Zapisujemy skopiowane dane pod aktualnym miesiącem w Firebase
-
-                    await set(ref(db, `months_data/${currentVal}`), prevData);
-
-                    alert("Dane zostały pomyślnie skopiowane!");
-
-                } else {
-
-                    alert("Nie znaleziono danych z poprzedniego miesiąca do skopiowania.");
-
-                }
-
-            }
-
-        });
-
-
-
-        window.addNewBill = function() {
-
-            const name = newBillNameInput.value.trim();
-
-            if (!name) return;
-
-            if (globalRegisteredBills.includes(name)) {
-
-                alert("Taki rachunek już istnieje!");
-
-                return;
-
-            }
-
-            globalRegisteredBills.push(name);
-
-            set(ref(db, 'registered_bills'), globalRegisteredBills);
-
-            newBillNameInput.value = '';
-
-        }
-
-
-
-        function updateBillName(index, oldName, newName) {
-
-            const cleanedNewName = newName.trim();
-
-            if (!cleanedNewName || cleanedNewName === oldName) {
-
-                rebuildGridStructure();
-
-                return;
-
-            }
-
-            if (globalRegisteredBills.includes(cleanedNewName)) {
-
-                alert("Rachunek o takiej nazwie już istnieje!");
-
-                rebuildGridStructure();
-
-                return;
-
-            }
-
-            const oldId = createBillId(oldName);
-
-            const newId = createBillId(cleanedNewName);
-
-
-
-            if (currentMonthData[oldId]) {
-
-                set(ref(db, `months_data/${monthSelect.value}/${newId}`), currentMonthData[oldId]);
-
-                set(ref(db, `months_data/${monthSelect.value}/${oldId}`), null);
-
-            }
-
-            globalRegisteredBills[index] = cleanedNewName;
-
-            set(ref(db, 'registered_bills'), globalRegisteredBills);
-
-        }
-
-
-
-        function removeBillFromCurrentMonth(name) {
-
-            const billId = createBillId(name);
-
-            if (confirm(`Czy usunąć rachunek "${name}" TYLKO z wybranego miesiąca?`)) {
-
-                update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
-
-                    status: 'removed',
-
-                    amount: 0, 
-
-                    paid: false
-
+                // ZMIANA: Zamiast natychmiastowego zapisu, dajemy opóźnienie (debounce)
+                card.querySelector('.amount-input').addEventListener('input', (e) => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        updateAmount(billId, e.target.value);
+                    }, 500); // Wyśle do bazy 500ms po skończeniu pisania
                 });
 
+                card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
+                card.querySelector('.name-input').addEventListener('change', (e) => updateBillName(index, name, e.target.value));
+
+                billsGrid.appendChild(card);
+            });
+            
+            updateLiveValues();
+
+            // Przywracamy zaznaczenie pola i kursor na właściwe miejsce po renderowaniu
+            if (activeElementId) {
+                const elementToFocus = document.getElementById(activeElementId);
+                if (elementToFocus) {
+                    elementToFocus.focus();
+                    if (selectionStart !== null && (elementToFocus.type === 'text' || elementToFocus.type === 'search')) {
+                        elementToFocus.setSelectionRange(selectionStart, selectionEnd);
+                    }
+                }
+            }
+        }
+
+        function calculateTotals() {
+            let paidSum = 0;
+            let unpaidSum = 0;
+
+            globalRegisteredBills.forEach(name => {
+                const billId = createBillId(name);
+                const billData = currentMonthData[billId] || { amount: 0, paid: false };
+                
+                if (billData.status === 'removed') return;
+                const amount = parseFloat(billData.amount) || 0;
+
+                if (billData.paid) paidSum += amount;
+                else unpaidSum += amount;
+            });
+
+            totalPaidSpan.textContent = paidSum.toFixed(2);
+            totalUnpaidSpan.textContent = unpaidSum.toFixed(2);
+            
+            drawChart(paidSum, unpaidSum);
+        }
+
+        function updateLiveValues() {
+            globalRegisteredBills.forEach(name => {
+                const billId = createBillId(name);
+                const billData = currentMonthData[billId] || { amount: '', paid: false };
+                
+                if (billData.status === 'removed') return;
+
+                const card = document.getElementById(`card-${billId}`);
+                if (!card) return;
+
+                const nameInput = card.querySelector('.name-input');
+                const amountInput = card.querySelector('.amount-input');
+                const paidCheckbox = card.querySelector('.paid-checkbox');
+
+                if (document.activeElement !== nameInput && nameInput) nameInput.value = name;
+                
+                // Aktualizujemy kwotę tylko wtedy, gdy pole nie jest teraz kliknięte
+                if (document.activeElement !== amountInput && amountInput) {
+                    amountInput.value = billData.amount;
+                }
+                if (paidCheckbox) paidCheckbox.checked = billData.paid;
+
+                if (billData.paid) {
+                    card.style.backgroundColor = "rgba(46, 125, 50, 0.12)";
+                    card.style.borderColor = "#2e7d32";
+                } else {
+                    card.style.backgroundColor = "var(--bg-card)";
+                    card.style.borderColor = "var(--border-color)";
+                }
+            });
+
+            calculateTotals();
+        }
+
+        copyPrevMonthBtn.addEventListener('click', async () => {
+            const currentVal = monthSelect.value;
+            const parts = currentVal.split('-');
+            let year = parseInt(parts[0]);
+            let monthIdx = parseInt(parts[1]);
+
+            if (monthIdx === 0) {
+                monthIdx = 11;
+                year -= 1;
+            } else {
+                monthIdx -= 1;
             }
 
-        }
-
-
-
-        function updateAmount(billId, value) {
-
-            update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
-
-                amount: value
-
-            });
-
-        }
-
-
-
-        function togglePaid(billId, isChecked) {
-
-            update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
-
-                paid: isChecked
-
-            });
-
-        }
-
-
-
-        monthSelect.addEventListener('change', () => {
-
-            listenToMonthData();
-
+            const prevMonthKey = `${year}-${monthIdx}`;
+            if (confirm(`Czy chcesz skopiować wszystkie kwoty oraz usunięte karty z miesiąca ${months[monthIdx]} ${year}?`)) {
+                const prevMonthRef = ref(db, `months_data/${prevMonthKey}`);
+                const snapshot = await get(prevMonthRef);
+                if (snapshot.exists()) {
+                    const prevData = snapshot.val();
+                    await set(ref(db, `months_data/${currentVal}`), prevData);
+                    alert("Dane zostały pomyślnie skopiowane!");
+                } else {
+                    alert("Nie znaleziono danych z poprzedniego miesiąca do skopiowania.");
+                }
+            }
         });
 
-        
+        window.addNewBill = function() {
+            const name = newBillNameInput.value.trim();
+            if (!name) return;
+            if (globalRegisteredBills.includes(name)) {
+                alert("Taki rachunek już istnieje!");
+                return;
+            }
+            globalRegisteredBills.push(name);
+            set(ref(db, 'registered_bills'), globalRegisteredBills);
+            newBillNameInput.value = '';
+        }
 
+        function updateBillName(index, oldName, newName) {
+            const cleanedNewName = newName.trim();
+            if (!cleanedNewName || cleanedNewName === oldName) {
+                rebuildGridStructure();
+                return;
+            }
+            if (globalRegisteredBills.includes(cleanedNewName)) {
+                alert("Rachunek o takiej nazwie już istnieje!");
+                rebuildGridStructure();
+                return;
+            }
+            const oldId = createBillId(oldName);
+            const newId = createBillId(cleanedNewName);
+
+            if (currentMonthData[oldId]) {
+                set(ref(db, `months_data/${monthSelect.value}/${newId}`), currentMonthData[oldId]);
+                set(ref(db, `months_data/${monthSelect.value}/${oldId}`), null);
+            }
+            globalRegisteredBills[index] = cleanedNewName;
+            set(ref(db, 'registered_bills'), globalRegisteredBills);
+        }
+
+        function removeBillFromCurrentMonth(name) {
+            const billId = createBillId(name);
+            if (confirm(`Czy usunąć rachunek "${name}" TYLKO z wybranego miesiąca?`)) {
+                update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+                    status: 'removed',
+                    amount: 0, 
+                    paid: false
+                });
+            }
+        }
+
+        function updateAmount(billId, value) {
+            update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+                amount: value
+            });
+        }
+
+        function togglePaid(billId, isChecked) {
+            update(ref(db, `months_data/${monthSelect.value}/${billId}`), {
+                paid: isChecked
+            });
+        }
+
+        monthSelect.addEventListener('change', () => {
+            listenToMonthData();
+        });
+        
         newBillNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewBill(); });
 
-
-
         listenToMonthData();
-
     });
-
 </script>
-
 </body>
-
 </html>
