@@ -108,7 +108,10 @@
                 <label for="monthSelect" style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 5px; color: var(--text-muted);">WYBIERZ MIESIĄC</label>
                 <select id="monthSelect" class="input-style" style="font-size: 16px; font-weight: 600; width: 200px;"></select>
             </div>
-            <button id="copyPrevMonthBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; background-color: transparent; border: 1px solid #007bff; color: #007bff;">📋 Kopiuj kwoty z poprz. miesiąca</button>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="copyPrevMonthBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; background-color: transparent; border: 1px solid #007bff; color: #007bff;">📋 Kopiuj kwoty z poprz. miesiąca</button>
+                <button id="clearMonthBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; background-color: transparent; border: 1px solid #c62828; color: #c62828;">🗑️ Wyczyść aktualny miesiąc</button>
+            </div>
         </div>
         
         <div style="display: flex; gap: 40px; flex-wrap: wrap;">
@@ -187,10 +190,10 @@
         const totalUnpaidSpan = document.getElementById('totalUnpaid');
         const themeToggle = document.getElementById('themeToggle');
         const copyPrevMonthBtn = document.getElementById('copyPrevMonthBtn');
+        const clearMonthBtn = document.getElementById('clearMonthBtn');
         const canvas = document.getElementById('miniChart');
         const ctx = canvas.getContext('2d');
 
-        // Licznik dla mechanizmu debouncingu (opóźnienia wysyłki kwot)
         let debounceTimer;
 
         themeToggle.addEventListener('click', () => {
@@ -275,7 +278,6 @@
         }
 
         function rebuildGridStructure() {
-            // Zapisujemy ID aktualnie klikniętego elementu oraz pozycję kursora
             const activeElementId = document.activeElement ? document.activeElement.id : null;
             const selectionStart = document.activeElement ? document.activeElement.selectionStart : null;
             const selectionEnd = document.activeElement ? document.activeElement.selectionEnd : null;
@@ -312,12 +314,11 @@
 
                 card.querySelector('.delete-btn').addEventListener('click', () => removeBillFromCurrentMonth(name));
                 
-                // ZMIANA: Zamiast natychmiastowego zapisu, dajemy opóźnienie (debounce)
                 card.querySelector('.amount-input').addEventListener('input', (e) => {
                     clearTimeout(debounceTimer);
                     debounceTimer = setTimeout(() => {
                         updateAmount(billId, e.target.value);
-                    }, 500); // Wyśle do bazy 500ms po skończeniu pisania
+                    }, 500); 
                 });
 
                 card.querySelector('.paid-checkbox').addEventListener('change', (e) => togglePaid(billId, e.target.checked));
@@ -328,7 +329,6 @@
             
             updateLiveValues();
 
-            // Przywracamy zaznaczenie pola i kursor na właściwe miejsce po renderowaniu
             if (activeElementId) {
                 const elementToFocus = document.getElementById(activeElementId);
                 if (elementToFocus) {
@@ -377,7 +377,6 @@
 
                 if (document.activeElement !== nameInput && nameInput) nameInput.value = name;
                 
-                // Aktualizujemy kwotę tylko wtedy, gdy pole nie jest teraz kliknięte
                 if (document.activeElement !== amountInput && amountInput) {
                     amountInput.value = billData.amount;
                 }
@@ -419,6 +418,20 @@
                 } else {
                     alert("Nie znaleziono danych z poprzedniego miesiąca do skopiowania.");
                 }
+            }
+        });
+
+        // NOWA METODA: Czyszczenie danych dla wybranego miesiąca w Firebase
+        clearMonthBtn.addEventListener('click', async () => {
+            const currentVal = monthSelect.value;
+            const parts = currentVal.split('-');
+            const year = parts[0];
+            const monthIdx = parseInt(parts[1]);
+
+            if (confirm(`⚠️ CZY NA PEWNO CHCESZ WYCZYŚCIĆ CAŁY MIESIĄC?\n\nSpowoduje to wyzerowanie kwot, statusów płatności i przywrócenie wszystkich usuniętych kart w miesiącu: ${months[monthIdx]} ${year}.`)) {
+                const monthDataRef = ref(db, `months_data/${currentVal}`);
+                await set(monthDataRef, null); // Usunięcie gałęzi miesiąca w bazie resetuje stan do domyślnego
+                alert("Miesiąc został wyczyszczony!");
             }
         });
 
