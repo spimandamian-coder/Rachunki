@@ -1,144 +1,4 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moje Rachunki - Dashboard</title>
-    <style>
-        :root {
-            --bg-primary: #f8f9fa;
-            --bg-card: #ffffff;
-            --text-main: #212529;
-            --text-muted: #6c757d;
-            --border-color: #dee2e6;
-            --shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        [data-theme="dark"] {
-            --bg-primary: #121212;
-            --bg-card: #1e1e1e;
-            --text-main: #f8f9fa;
-            --text-muted: #a0a0a0;
-            --border-color: #333333;
-            --shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-main);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            transition: background-color 0.3s, color 0.3s;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 30px 20px;
-        }
-        .header-zone {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        .dashboard-box {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 30px;
-        }
-        .bill-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 20px;
-            position: relative;
-            box-shadow: var(--shadow);
-            transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s;
-        }
-        .bill-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
-        }
-        .btn {
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border-radius: 8px;
-            border: none;
-            transition: opacity 0.2s;
-        }
-        .btn:hover { opacity: 0.9; }
-        .btn-primary { background-color: #007bff; color: white; }
-        .btn-secondary { background-color: #6c757d; color: white; }
-        .input-style {
-            padding: 10px;
-            background: var(--bg-card);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            outline: none;
-        }
-        .chart-container {
-            position: relative;
-            width: 120px;
-            height: 120px;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div class="header-zone">
-        <h1 style="margin: 0; font-weight: 700; font-size: 28px;">🎛️ FinanseDomowe</h1>
-        <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
-    </div>
-    
-    <!-- DASHBOARD Z WYKRESEM -->
-    <div class="dashboard-box">
-        <div style="display: flex; flex-direction: column; gap: 15px;">
-            <div>
-                <label for="monthSelect" style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 5px; color: var(--text-muted);">WYBIERZ MIESIĄC</label>
-                <select id="monthSelect" class="input-style" style="font-size: 16px; font-weight: 600; width: 200px;"></select>
-            </div>
-            <button id="copyPrevMonthBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; background-color: transparent; border: 1px solid #007bff; color: #007bff;">📋 Kopiuj kwoty z poprz. miesiąca</button>
-        </div>
-        
-        <div style="display: flex; gap: 40px; flex-wrap: wrap;">
-            <div style="display: flex; flex-direction: column; justify-content: center;">
-                <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">OPŁACONE</span>
-                <span style="color: #2e7d32; font-size: 24px; font-weight: 700;"><span id="totalPaid">0.00</span> zł</span>
-            </div>
-            <div style="display: flex; flex-direction: column; justify-content: center;">
-                <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">DO ZAPŁATY</span>
-                <span style="color: #c62828; font-size: 24px; font-weight: 700;"><span id="totalUnpaid">0.00</span> zł</span>
-            </div>
-        </div>
-
-        <!-- DYNAMICZNY GADŻET: WYKRES -->
-        <div class="chart-container">
-            <canvas id="miniChart" width="120" height="120"></canvas>
-        </div>
-    </div>
-
-    <!-- PANELE AKCJI -->
-    <div style="margin-bottom: 30px; display: flex; gap: 10px; flex-wrap: wrap;">
-        <input type="text" id="newBillName" placeholder="Nazwa nowego rachunku np. Prąd Armii..." class="input-style" style="width: 300px; font-size: 15px;">
-        <button onclick="window.addNewBill()" class="btn btn-primary">➕ Dodaj rachunek</button>
-    </div>
-
-    <!-- SIATKA RACHUNKÓW -->
-    <div id="billsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;"></div>
-</div>
-
-<!-- SKRYPT FIREBASE + LOGIKA -->
+<!-- Zastąp sekcję skryptu tą wersją -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -168,7 +28,6 @@
         "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"
     ];
 
-    // Funkcja inteligentnego dobierania ikon do kategorii
     function getBillIcon(name) {
         const lower = name.toLowerCase();
         if (lower.includes('prad') || lower.includes('energia')) return '⚡';
@@ -191,7 +50,6 @@
         const canvas = document.getElementById('miniChart');
         const ctx = canvas.getContext('2d');
 
-        // Dark Mode switch
         themeToggle.addEventListener('click', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -212,7 +70,6 @@
             });
         });
         
-        // Start od bieżącego miesiąca (Lipiec 2026)
         monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
         let globalRegisteredBills = [];
@@ -222,7 +79,6 @@
             return encodeURIComponent(name.toLowerCase().trim().replace(/\s+/g, '_'));
         }
 
-        // Realtime Słuchacz Listy Głównej
         const billsListRef = ref(db, 'registered_bills');
         onValue(billsListRef, (snapshot) => {
             const data = snapshot.val();
@@ -232,18 +88,17 @@
                 globalRegisteredBills = defaultBills;
                 set(billsListRef, defaultBills);
             }
-            rebuildGridStructure(); 
+            renderGridStructure(); 
         });
 
         function listenToMonthData() {
             const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
             onValue(monthDataRef, (snapshot) => {
                 currentMonthData = snapshot.val() || {};
-                rebuildGridStructure();
+                updateLiveValues();
             });
         }
 
-        // Rysowanie wykresu kołowego na Canvasie
         function drawChart(paid, unpaid) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const total = paid + unpaid;
@@ -257,21 +112,18 @@
 
             const paidAngle = (paid / total) * 2 * Math.PI;
 
-            // Opłacone (Zielony)
             ctx.beginPath();
             ctx.moveTo(60, 60);
             ctx.arc(60, 60, 55, 0, paidAngle);
             ctx.fillStyle = '#2e7d32';
             ctx.fill();
 
-            // Do zapłaty (Czerwony)
             ctx.beginPath();
             ctx.moveTo(60, 60);
             ctx.arc(60, 60, 55, paidAngle, 2 * Math.PI);
             ctx.fillStyle = '#c62828';
             ctx.fill();
 
-            // Wycięcie środka (Donut Chart)
             ctx.beginPath();
             ctx.arc(60, 60, 38, 0, 2 * Math.PI);
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -279,16 +131,14 @@
             ctx.fill();
         }
 
-        function rebuildGridStructure() {
+        // KROK 1: Budowanie szkieletu kart TYLKO raz (lub przy zmianie listy głównej / miesiąca)
+        function renderGridStructure() {
             billsGrid.innerHTML = '';
             
             globalRegisteredBills.forEach((name, index) => {
                 const billId = createBillId(name);
-                const billData = currentMonthData[billId] || { amount: '', paid: false };
-                
-                if (billData.status === 'removed') return; 
-                
                 const icon = getBillIcon(name);
+                
                 const card = document.createElement('div');
                 card.className = `bill-card`;
                 card.id = `card-${billId}`;
@@ -302,7 +152,7 @@
                     </div>
                     <div style="margin-bottom: 15px;">
                         <label style="display:block; margin-bottom:5px; font-size: 12px; color: var(--text-muted); font-weight: 600;">KWOTA DO ZAPŁATY</label>
-                        <input type="number" step="0.01" class="amount-input" placeholder="0.00" class="input-style" style="padding: 8px; width: 85%; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-main);"> <span style="font-weight: 600;">zł</span>
+                        <input type="number" step="0.01" class="amount-input" placeholder="0.00" style="padding: 8px; width: 85%; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-main);"> <span style="font-weight: 600;">zł</span>
                     </div>
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
                         <input type="checkbox" class="paid-checkbox" style="width: 18px; height: 18px; cursor: pointer;">
@@ -342,23 +192,31 @@
             drawChart(paidSum, unpaidSum);
         }
 
+        // KROK 2: Aktualizacja wartości dynamicznych BEZ usuwania obiektów z DOM
         function updateLiveValues() {
             globalRegisteredBills.forEach(name => {
                 const billId = createBillId(name);
                 const billData = currentMonthData[billId] || { amount: '', paid: false };
-                
-                if (billData.status === 'removed') return;
-
                 const card = document.getElementById(`card-${billId}`);
+                
                 if (!card) return;
+
+                // Jeśli karta została oznaczona jako usunięta, ukrywamy ją wizualnie
+                if (billData.status === 'removed') {
+                    card.style.display = 'none';
+                    return;
+                } else {
+                    card.style.display = 'block';
+                }
 
                 const nameInput = card.querySelector('.name-input');
                 const amountInput = card.querySelector('.amount-input');
                 const paidCheckbox = card.querySelector('.paid-checkbox');
 
+                // KLUCZOWA POPRAWKA: Aktualizuj tylko wtedy, kiedy użytkownik NIE pisze w danym inpucie
                 if (document.activeElement !== nameInput && nameInput) nameInput.value = name;
-                if (document.activeElement !== amountInput && amountInput) amountInput.value = billData.amount;
-                if (paidCheckbox) paidCheckbox.checked = billData.paid;
+                if (document.activeElement !== amountInput && amountInput) amountInput.value = billData.amount ?? '';
+                if (paidCheckbox) paidCheckbox.checked = !!billData.paid;
 
                 if (billData.paid) {
                     card.style.backgroundColor = "rgba(46, 125, 50, 0.12)";
@@ -372,7 +230,6 @@
             calculateTotals();
         }
 
-        // PODPISANIE KROKU: Kopiowanie z poprzedniego miesiąca
         copyPrevMonthBtn.addEventListener('click', async () => {
             const currentVal = monthSelect.value;
             const parts = currentVal.split('-');
@@ -392,7 +249,6 @@
                 const snapshot = await get(prevMonthRef);
                 if (snapshot.exists()) {
                     const prevData = snapshot.val();
-                    // Zapisujemy skopiowane dane pod aktualnym miesiącem w Firebase
                     await set(ref(db, `months_data/${currentVal}`), prevData);
                     alert("Dane zostały pomyślnie skopiowane!");
                 } else {
@@ -416,12 +272,12 @@
         function updateBillName(index, oldName, newName) {
             const cleanedNewName = newName.trim();
             if (!cleanedNewName || cleanedNewName === oldName) {
-                rebuildGridStructure();
+                renderGridStructure();
                 return;
             }
             if (globalRegisteredBills.includes(cleanedNewName)) {
                 alert("Rachunek o takiej nazwie już istnieje!");
-                rebuildGridStructure();
+                renderGridStructure();
                 return;
             }
             const oldId = createBillId(oldName);
@@ -459,6 +315,7 @@
         }
 
         monthSelect.addEventListener('change', () => {
+            renderGridStructure(); // Przy zmianie miesiąca generujemy karty na nowo
             listenToMonthData();
         });
         
@@ -467,5 +324,3 @@
         listenToMonthData();
     });
 </script>
-</body>
-</html>
