@@ -141,6 +141,82 @@
             margin-right: 10px;
             font-family: monospace;
         }
+
+        /* EKRAN BLOKADY PIN */
+        #pinOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-primary);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        .pin-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            max-width: 600px;
+            width: 90%;
+        }
+        .pin-left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .pin-display {
+            font-size: 32px;
+            letter-spacing: 10px;
+            text-align: center;
+            padding: 15px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            min-height: 45px;
+            color: var(--text-main);
+        }
+        .pin-error {
+            color: #c62828;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            min-height: 20px;
+        }
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .num-btn {
+            width: 65px;
+            height: 65px;
+            font-size: 22px;
+            font-weight: 600;
+            background: var(--bg-primary);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+        .num-btn:active {
+            background: var(--border-color);
+        }
+        @media (max-width: 600px) {
+            .pin-container {
+                flex-direction: column;
+                gap: 20px;
+                padding: 20px;
+            }
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -149,10 +225,40 @@
 </head>
 <body>
 
-<div class="container">
+<!-- EKRAN BLOKADY PIN -->
+<div id="pinOverlay">
+    <div class="pin-container">
+        <div class="pin-left">
+            <h2 style="margin: 0; font-size: 22px;">🔒 Dostęp zablokowany</h2>
+            <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Wprowadź kod PIN, aby móc edytować i przeglądać rachunki.</p>
+            <div id="pinDisplay" class="pin-display"></div>
+            <div id="pinError" class="pin-error"></div>
+        </div>
+        <div class="numpad">
+            <button class="num-btn" onclick="pressNum('1')">1</button>
+            <button class="num-btn" onclick="pressNum('2')">2</button>
+            <button class="num-btn" onclick="pressNum('3')">3</button>
+            <button class="num-btn" onclick="pressNum('4')">4</button>
+            <button class="num-btn" onclick="pressNum('5')">5</button>
+            <button class="num-btn" onclick="pressNum('6')">6</button>
+            <button class="num-btn" onclick="pressNum('7')">7</button>
+            <button class="num-btn" onclick="pressNum('8')">8</button>
+            <button class="num-btn" onclick="pressNum('9')">9</button>
+            <button class="num-btn" onclick="pressNum('❌')" style="font-size: 16px; background-color: rgba(198, 40, 40, 0.1); color: #c62828;">Wyczyść</button>
+            <button class="num-btn" onclick="pressNum('0')">0</button>
+            <button class="num-btn" onclick="pressNum('🔓')" style="font-size: 16px; background-color: rgba(46, 125, 50, 0.1); color: #2e7d32;">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- GLÓWNA ZAWARTOŚĆ (UKRYTA DOKĄD PIN NIE JEST POPRAWNY) -->
+<div id="mainContent" style="display: none;" class="container">
     <div class="header-zone">
         <h1 style="margin: 0; font-weight: 700; font-size: 28px;">🎛️ FinanseDomowe</h1>
-        <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
+        <div style="display: flex; gap: 10px;">
+            <button id="lockAppBtn" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 14px; padding: 5px 12px;">🔒 Zablokuj</button>
+            <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
+        </div>
     </div>
     
     <!-- DASHBOARD Z WYKRESEM -->
@@ -211,6 +317,63 @@
     </div>
 </div>
 
+<!-- SKRYPT LOGIKI PIN (Zadeklarowany globalnie) -->
+<script>
+    // ZMIEŃ TEN KOD NA SWÓJ WŁASNY PIN
+    const CORRECT_PIN = "6969"; 
+    let enteredPin = "";
+
+    function pressNum(num) {
+        const display = document.getElementById("pinDisplay");
+        const errorDiv = document.getElementById("pinError");
+        errorDiv.textContent = "";
+
+        if (num === '❌') {
+            enteredPin = "";
+        } else if (num === '🔓') {
+            checkPin();
+            return;
+        } else {
+            if (enteredPin.length < 8) { // limit do 8 cyfr
+                enteredPin += num;
+            }
+        }
+        
+        // Wyświetlanie kropek zamiast cyfr dla bezpieczeństwa
+        display.textContent = "•".repeat(enteredPin.length);
+        
+        // Automatyczne sprawdzenie, jeśli kod osiągnie długość prawidłowego PINu
+        if (enteredPin.length === CORRECT_PIN.length) {
+            setTimeout(checkPin, 150);
+        }
+    }
+
+    function checkPin() {
+        const errorDiv = document.getElementById("pinError");
+        if (enteredPin === CORRECT_PIN) {
+            document.getElementById("pinOverlay").style.display = "none";
+            document.getElementById("mainContent").style.display = "block";
+            enteredPin = "";
+            document.getElementById("pinDisplay").textContent = "";
+            // Wywołanie rysowania wykresu po odblokowaniu, żeby się odświeżył canvas
+            window.triggerChartRefresh?.();
+        } else {
+            errorDiv.textContent = "❌ Niepoprawny kod PIN!";
+            enteredPin = "";
+            document.getElementById("pinDisplay").textContent = "";
+        }
+    }
+
+    // Obsługa wpisywania z fizycznej klawiatury komputera
+    document.addEventListener("keydown", (e) => {
+        if (document.getElementById("pinOverlay").style.display !== "none") {
+            if (e.key >= "0" && e.key <= "9") pressNum(e.key);
+            if (e.key === "Backspace" || e.key === "Escape") pressNum('❌');
+            if (e.key === "Enter") pressNum('🔓');
+        }
+    });
+</script>
+
 <!-- SKRYPT FIREBASE + LOGIKA -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -259,6 +422,7 @@
         const totalPaidSpan = document.getElementById('totalPaid');
         const totalUnpaidSpan = document.getElementById('totalUnpaid');
         const themeToggle = document.getElementById('themeToggle');
+        const lockAppBtn = document.getElementById('lockAppBtn');
         const copyPrevMonthBtn = document.getElementById('copyPrevMonthBtn');
         const clearMonthBtn = document.getElementById('clearMonthBtn');
         const canvas = document.getElementById('miniChart');
@@ -278,6 +442,12 @@
             document.documentElement.setAttribute('data-theme', newTheme);
             themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
             drawChart(parseFloat(totalPaidSpan.textContent), parseFloat(totalUnpaidSpan.textContent));
+        });
+
+        // Przycisk ręcznego blokowania aplikacji
+        lockAppBtn.addEventListener('click', () => {
+            document.getElementById("mainContent").style.display = "none";
+            document.getElementById("pinOverlay").style.display = "flex";
         });
 
         const currentYear = new Date().getFullYear();
@@ -369,6 +539,11 @@
             ctx.fillStyle = isDark ? '#1e1e1e' : '#ffffff';
             ctx.fill();
         }
+
+        // Pozwala skryptowi PIN na wymuszenie odświeżenia wykresu po odblokowaniu ekranu
+        window.triggerChartRefresh = function() {
+            calculateTotals();
+        };
 
         function rebuildGridStructure() {
             const activeElementId = document.activeElement ? document.activeElement.id : null;
