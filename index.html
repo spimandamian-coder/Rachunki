@@ -251,7 +251,7 @@
     </div>
 </div>
 
-<!-- GLÓWNA ZAWARTOŚĆ (UKRYTA DOKĄD PIN NIE JEST POPRAWNY) -->
+<!-- GŁÓWNA ZAWARTOŚĆ (UKRYTA DOKĄD PIN NIE JEST POPRAWNY) -->
 <div id="mainContent" style="display: none;" class="container">
     <div class="header-zone">
         <h1 style="margin: 0; font-weight: 700; font-size: 28px;">🎛️ FinanseDomowe</h1>
@@ -317,16 +317,17 @@
     </div>
 </div>
 
-<!-- SKRYPT LOGIKI PIN (Zadeklarowany globalnie) -->
+<!-- SKRYPT LOGIKI PIN -->
 <script>
     // ZMIEŃ TEN KOD NA SWÓJ WŁASNY PIN
     const CORRECT_PIN = "6969"; 
     let enteredPin = "";
+    let isAppUnlocked = false;
 
     function pressNum(num) {
         const display = document.getElementById("pinDisplay");
         const errorDiv = document.getElementById("pinError");
-        errorDiv.textContent = "";
+        if (errorDiv) errorDiv.textContent = "";
 
         if (num === '❌') {
             enteredPin = "";
@@ -334,15 +335,13 @@
             checkPin();
             return;
         } else {
-            if (enteredPin.length < 8) { // limit do 8 cyfr
+            if (enteredPin.length < 8) {
                 enteredPin += num;
             }
         }
         
-        // Wyświetlanie kropek zamiast cyfr dla bezpieczeństwa
-        display.textContent = "•".repeat(enteredPin.length);
+        if (display) display.textContent = "•".repeat(enteredPin.length);
         
-        // Automatyczne sprawdzenie, jeśli kod osiągnie długość prawidłowego PINu
         if (enteredPin.length === CORRECT_PIN.length) {
             setTimeout(checkPin, 150);
         }
@@ -351,22 +350,27 @@
     function checkPin() {
         const errorDiv = document.getElementById("pinError");
         if (enteredPin === CORRECT_PIN) {
+            isAppUnlocked = true;
             document.getElementById("pinOverlay").style.display = "none";
             document.getElementById("mainContent").style.display = "block";
             enteredPin = "";
-            document.getElementById("pinDisplay").textContent = "";
-            // Wywołanie rysowania wykresu po odblokowaniu, żeby się odświeżył canvas
-            window.triggerChartRefresh?.();
+            const display = document.getElementById("pinDisplay");
+            if (display) display.textContent = "";
+            
+            // Bezpieczne odświeżenie danych i wykresu po odblokowaniu
+            if (typeof window.triggerChartRefresh === "function") {
+                window.triggerChartRefresh();
+            }
         } else {
-            errorDiv.textContent = "❌ Niepoprawny kod PIN!";
+            if (errorDiv) errorDiv.textContent = "❌ Niepoprawny kod PIN!";
             enteredPin = "";
-            document.getElementById("pinDisplay").textContent = "";
+            const display = document.getElementById("pinDisplay");
+            if (display) display.textContent = "";
         }
     }
 
-    // Obsługa wpisywania z fizycznej klawiatury komputera
     document.addEventListener("keydown", (e) => {
-        if (document.getElementById("pinOverlay").style.display !== "none") {
+        if (!isAppUnlocked) {
             if (e.key >= "0" && e.key <= "9") pressNum(e.key);
             if (e.key === "Backspace" || e.key === "Escape") pressNum('❌');
             if (e.key === "Enter") pressNum('🔓');
@@ -428,7 +432,6 @@
         const canvas = document.getElementById('miniChart');
         const ctx = canvas.getContext('2d');
         
-        // Modal logów elementy
         const logsModal = document.getElementById('logsModal');
         const openLogsBtn = document.getElementById('openLogsBtn');
         const closeLogsBtn = document.getElementById('closeLogsBtn');
@@ -441,11 +444,13 @@
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', newTheme);
             themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-            drawChart(parseFloat(totalPaidSpan.textContent), parseFloat(totalUnpaidSpan.textContent));
+            if (window.isAppUnlocked) {
+                drawChart(parseFloat(totalPaidSpan.textContent), parseFloat(totalUnpaidSpan.textContent));
+            }
         });
 
-        // Przycisk ręcznego blokowania aplikacji
         lockAppBtn.addEventListener('click', () => {
+            window.isAppUnlocked = false;
             document.getElementById("mainContent").style.display = "none";
             document.getElementById("pinOverlay").style.display = "flex";
         });
@@ -476,7 +481,6 @@
             return `${months[parseInt(parts[1])]} ${parts[0]}`;
         }
 
-        // FUNKCJA ZAPISUJĄCA LOGI DO FIREBASE
         function logEvent(message) {
             const logsRef = ref(db, 'operation_logs');
             const now = new Date();
@@ -497,18 +501,19 @@
                 globalRegisteredBills = defaultBills;
                 set(billsListRef, defaultBills);
             }
-            rebuildGridStructure(); 
+            if (window.isAppUnlocked) rebuildGridStructure(); 
         });
 
         function listenToMonthData() {
             const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
             onValue(monthDataRef, (snapshot) => {
                 currentMonthData = snapshot.val();
-                rebuildGridStructure();
+                if (window.isAppUnlocked) rebuildGridStructure();
             });
         }
 
         function drawChart(paid, unpaid) {
+            if (!window.isAppUnlocked || !canvas || !ctx) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const total = paid + unpaid;
             if (total === 0) {
@@ -540,12 +545,12 @@
             ctx.fill();
         }
 
-        // Pozwala skryptowi PIN na wymuszenie odświeżenia wykresu po odblokowaniu ekranu
         window.triggerChartRefresh = function() {
-            calculateTotals();
+            rebuildGridStructure();
         };
 
         function rebuildGridStructure() {
+            if (!window.isAppUnlocked) return;
             const activeElementId = document.activeElement ? document.activeElement.id : null;
             const selectionStart = document.activeElement ? document.activeElement.selectionStart : null;
             const selectionEnd = document.activeElement ? document.activeElement.selectionEnd : null;
@@ -802,7 +807,6 @@
                     return;
                 }
                 
-                // Konwertujemy obiekt na tablicę i sortujemy od najnowszych
                 const logsList = Object.keys(data).map(key => data[key]).reverse();
                 
                 logsList.forEach(log => {
