@@ -142,81 +142,6 @@
             font-family: monospace;
         }
 
-        /* EKRAN BLOKADY PIN */
-        #pinOverlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--bg-primary);
-            z-index: 9999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: background-color 0.3s;
-        }
-        .pin-container {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: var(--shadow);
-            display: flex;
-            align-items: center;
-            gap: 40px;
-            max-width: 600px;
-            width: 90%;
-        }
-        .pin-left {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .pin-display {
-            font-size: 32px;
-            letter-spacing: 10px;
-            text-align: center;
-            padding: 15px;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            min-height: 45px;
-            color: var(--text-main);
-        }
-        .pin-error {
-            color: #c62828;
-            font-size: 14px;
-            font-weight: 600;
-            text-align: center;
-            min-height: 20px;
-        }
-        .numpad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-        }
-        .num-btn {
-            width: 65px;
-            height: 65px;
-            font-size: 22px;
-            font-weight: 600;
-            background: var(--bg-primary);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            border-radius: 50%;
-            cursor: pointer;
-            transition: background-color 0.1s;
-        }
-        .num-btn:active {
-            background: var(--border-color);
-        }
-        @media (max-width: 600px) {
-            .pin-container {
-                flex-direction: column;
-                gap: 20px;
-                padding: 20px;
-            }
-        }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -225,38 +150,12 @@
 </head>
 <body>
 
-<!-- EKRAN BLOKADY PIN -->
-<div id="pinOverlay">
-    <div class="pin-container">
-        <div class="pin-left">
-            <h2 style="margin: 0; font-size: 22px;">🔒 Dostęp zablokowany</h2>
-            <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Wprowadź kod PIN, aby móc edytować i przeglądać rachunki.</p>
-            <div id="pinDisplay" class="pin-display"></div>
-            <div id="pinError" class="pin-error"></div>
-        </div>
-        <div class="numpad">
-            <button class="num-btn" onclick="pressNum('1')">1</button>
-            <button class="num-btn" onclick="pressNum('2')">2</button>
-            <button class="num-btn" onclick="pressNum('3')">3</button>
-            <button class="num-btn" onclick="pressNum('4')">4</button>
-            <button class="num-btn" onclick="pressNum('5')">5</button>
-            <button class="num-btn" onclick="pressNum('6')">6</button>
-            <button class="num-btn" onclick="pressNum('7')">7</button>
-            <button class="num-btn" onclick="pressNum('8')">8</button>
-            <button class="num-btn" onclick="pressNum('9')">9</button>
-            <button class="num-btn" onclick="pressNum('❌')" style="font-size: 16px; background-color: rgba(198, 40, 40, 0.1); color: #c62828;">Wyczyść</button>
-            <button class="num-btn" onclick="pressNum('0')">0</button>
-            <button class="num-btn" onclick="pressNum('🔓')" style="font-size: 16px; background-color: rgba(46, 125, 50, 0.1); color: #2e7d32;">OK</button>
-        </div>
-    </div>
-</div>
-
-<!-- GŁÓWNA ZAWARTOŚĆ (UKRYTA DOKĄD PIN NIE JEST POPRAWNY) -->
-<div id="mainContent" style="display: none;" class="container">
+<!-- GŁÓWNA ZAWARTOŚĆ (WIDOCZNA OD RAZU) -->
+<div id="mainContent" class="container">
     <div class="header-zone">
         <h1 style="margin: 0; font-weight: 700; font-size: 28px;">🎛️ FinanseDomowe</h1>
-        <div style="display: flex; gap: 10px;">
-            <button id="lockAppBtn" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 14px; padding: 5px 12px;">🔒 Zablokuj</button>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="lockStatus" style="font-size: 13px; font-weight: 600; color: #6c757d; background: var(--bg-card); padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border-color);">🔒 Tylko podgląd</span>
             <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
         </div>
     </div>
@@ -317,65 +216,30 @@
     </div>
 </div>
 
-<!-- SKRYPT LOGIKI PIN -->
+<!-- SKRYPT VALIDACJI PINU PRZY EDYCJI -->
 <script>
-    // ZMIEŃ TEN KOD NA SWÓJ WŁASNY PIN
-    const CORRECT_PIN = "6969"; 
-    let enteredPin = "";
-    let isAppUnlocked = false;
+    const CORRECT_PIN = "1234"; // Twój kod PIN
+    window.isAppUnlocked = false; // Status uprawnień do edycji
 
-    function pressNum(num) {
-        const display = document.getElementById("pinDisplay");
-        const errorDiv = document.getElementById("pinError");
-        if (errorDiv) errorDiv.textContent = "";
-
-        if (num === '❌') {
-            enteredPin = "";
-        } else if (num === '🔓') {
-            checkPin();
-            return;
-        } else {
-            if (enteredPin.length < 8) {
-                enteredPin += num;
-            }
-        }
+    // Funkcja sprawdzająca uprawnienia przed wykonaniem jakiejkolwiek akcji zapisu/edycji
+    function checkPermission() {
+        if (window.isAppUnlocked) return true;
         
-        if (display) display.textContent = "•".repeat(enteredPin.length);
-        
-        if (enteredPin.length === CORRECT_PIN.length) {
-            setTimeout(checkPin, 150);
-        }
-    }
-
-    function checkPin() {
-        const errorDiv = document.getElementById("pinError");
-        if (enteredPin === CORRECT_PIN) {
-            isAppUnlocked = true;
-            document.getElementById("pinOverlay").style.display = "none";
-            document.getElementById("mainContent").style.display = "block";
-            enteredPin = "";
-            const display = document.getElementById("pinDisplay");
-            if (display) display.textContent = "";
-            
-            // Bezpieczne odświeżenie danych i wykresu po odblokowaniu
-            if (typeof window.triggerChartRefresh === "function") {
-                window.triggerChartRefresh();
+        const pin = prompt("🔐 Ta akcja wymaga autoryzacji. Wprowadź kod PIN:");
+        if (pin === CORRECT_PIN) {
+            window.isAppUnlocked = true;
+            const statusEl = document.getElementById('lockStatus');
+            if (statusEl) {
+                statusEl.textContent = "🔓 Edycja włączona";
+                statusEl.style.color = "#2e7d32";
+                statusEl.style.borderColor = "#2e7d32";
             }
-        } else {
-            if (errorDiv) errorDiv.textContent = "❌ Niepoprawny kod PIN!";
-            enteredPin = "";
-            const display = document.getElementById("pinDisplay");
-            if (display) display.textContent = "";
+            return true;
+        } else if (pin !== null) {
+            alert("❌ Niepoprawny kod PIN! Działanie zostało zablokowane.");
         }
+        return false;
     }
-
-    document.addEventListener("keydown", (e) => {
-        if (!isAppUnlocked) {
-            if (e.key >= "0" && e.key <= "9") pressNum(e.key);
-            if (e.key === "Backspace" || e.key === "Escape") pressNum('❌');
-            if (e.key === "Enter") pressNum('🔓');
-        }
-    });
 </script>
 
 <!-- SKRYPT FIREBASE + LOGIKA -->
@@ -426,7 +290,6 @@
         const totalPaidSpan = document.getElementById('totalPaid');
         const totalUnpaidSpan = document.getElementById('totalUnpaid');
         const themeToggle = document.getElementById('themeToggle');
-        const lockAppBtn = document.getElementById('lockAppBtn');
         const copyPrevMonthBtn = document.getElementById('copyPrevMonthBtn');
         const clearMonthBtn = document.getElementById('clearMonthBtn');
         const canvas = document.getElementById('miniChart');
@@ -444,15 +307,7 @@
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', newTheme);
             themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-            if (window.isAppUnlocked) {
-                drawChart(parseFloat(totalPaidSpan.textContent), parseFloat(totalUnpaidSpan.textContent));
-            }
-        });
-
-        lockAppBtn.addEventListener('click', () => {
-            window.isAppUnlocked = false;
-            document.getElementById("mainContent").style.display = "none";
-            document.getElementById("pinOverlay").style.display = "flex";
+            drawChart(parseFloat(totalPaidSpan.textContent), parseFloat(totalUnpaidSpan.textContent));
         });
 
         const currentYear = new Date().getFullYear();
@@ -501,19 +356,19 @@
                 globalRegisteredBills = defaultBills;
                 set(billsListRef, defaultBills);
             }
-            if (window.isAppUnlocked) rebuildGridStructure(); 
+            rebuildGridStructure(); 
         });
 
         function listenToMonthData() {
             const monthDataRef = ref(db, `months_data/${monthSelect.value}`);
             onValue(monthDataRef, (snapshot) => {
                 currentMonthData = snapshot.val();
-                if (window.isAppUnlocked) rebuildGridStructure();
+                rebuildGridStructure();
             });
         }
 
         function drawChart(paid, unpaid) {
-            if (!window.isAppUnlocked || !canvas || !ctx) return;
+            if (!canvas || !ctx) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const total = paid + unpaid;
             if (total === 0) {
@@ -545,12 +400,7 @@
             ctx.fill();
         }
 
-        window.triggerChartRefresh = function() {
-            rebuildGridStructure();
-        };
-
         function rebuildGridStructure() {
-            if (!window.isAppUnlocked) return;
             const activeElementId = document.activeElement ? document.activeElement.id : null;
             const selectionStart = document.activeElement ? document.activeElement.selectionStart : null;
             const selectionEnd = document.activeElement ? document.activeElement.selectionEnd : null;
@@ -591,11 +441,21 @@
                     </label>
                 `;
 
-                card.querySelector('.delete-btn').addEventListener('click', () => removeBillFromCurrentMonth(name));
+                // BLOKADA USUWANIA PINEM
+                card.querySelector('.delete-btn').addEventListener('click', () => {
+                    if (checkPermission()) removeBillFromCurrentMonth(name);
+                });
                 
+                // BLOKADA ZMIANY KWOTY PINEM
                 card.querySelector('.amount-input').addEventListener('input', (e) => {
                     const oldVal = billData.amount || '0.00';
                     const newVal = e.target.value;
+                    
+                    if (!checkPermission()) {
+                        e.target.value = oldVal; // Cofnij zmianę w polu tekstowym
+                        return;
+                    }
+
                     clearTimeout(debounceTimer);
                     debounceTimer = setTimeout(() => {
                         updateAmount(billId, newVal);
@@ -603,12 +463,26 @@
                     }, 500); 
                 });
 
+                // BLOKADA CHECKBOXA PINEM
+                card.querySelector('.paid-checkbox').addEventListener('click', (e) => {
+                    // Ponieważ to jest kliknięcie w checkbox, musimy zapobiec domyślnej akcji zmiany stanu, dopóki PIN nie przejdzie
+                    if (!checkPermission()) {
+                        e.preventDefault();
+                        return;
+                    }
+                });
+
                 card.querySelector('.paid-checkbox').addEventListener('change', (e) => {
                     togglePaid(billId, e.target.checked);
                     logEvent(`[${getFriendlyMonthName(monthSelect.value)}] Oznaczono rachunek "${name}" jako ${e.target.checked ? 'OPŁACONY' : 'NIEOPŁACONY'}`);
                 });
                 
+                // BLOKADA ZMIANY NAZWY PINEM
                 card.querySelector('.name-input').addEventListener('change', (e) => {
+                    if (!checkPermission()) {
+                        e.target.value = name; // Cofnij zmianę wizualną
+                        return;
+                    }
                     const idx = globalRegisteredBills.findIndex(n => createBillId(n) === billId);
                     updateBillName(idx >= 0 ? idx : globalRegisteredBills.length, name, e.target.value);
                 });
@@ -691,7 +565,10 @@
             calculateTotals();
         }
 
+        // KOPIRZ MIESIĄC Z BLOKADĄ PIN
         copyPrevMonthBtn.addEventListener('click', async () => {
+            if (!checkPermission()) return;
+            
             const currentVal = monthSelect.value;
             const parts = currentVal.split('-');
             let year = parseInt(parts[0]);
@@ -719,7 +596,10 @@
             }
         });
 
+        // CZYSZCZENIE MIESIĄCA Z BLOKADĄ PIN
         clearMonthBtn.addEventListener('click', async () => {
+            if (!checkPermission()) return;
+            
             const currentVal = monthSelect.value;
             if (confirm(`⚠️ CZY NA PEWNO CHCESZ WYCZYŚCIĆ CAŁY MIESIĄC?\n\nSpowoduje to całkowite USUNIĘCIE WSZYSTKICH KAFELKÓW (nazw i kwot) w miesiącu: ${getFriendlyMonthName(currentVal)}.\nEkran będzie całkowicie pusty.`)) {
                 const monthDataRef = ref(db, `months_data/${currentVal}`);
@@ -729,7 +609,10 @@
             }
         });
 
+        // DODAWANIE Z BLOKADĄ PIN
         window.addNewBill = function() {
+            if (!checkPermission()) return;
+
             const name = newBillNameInput.value.trim();
             if (!name) return;
             
@@ -792,7 +675,6 @@
             });
         }
 
-        // --- OBSŁUGA OKIENKA MODALNEGO LOGÓW ---
         openLogsBtn.addEventListener('click', () => {
             logsModal.style.display = 'flex';
             modalLogBody.innerHTML = '<div style="text-align: center; color: var(--text-muted);">Pobieranie historii z bazy...</div>';
