@@ -135,30 +135,10 @@
 </div>
 
 <script type="module">
-    // Kod do wklejenia w statystyki.html, aby tam też działał tryb ciemny:
-document.addEventListener("DOMContentLoaded", () => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    
-    // Jeśli na stronie statystyk masz przycisk do zmiany motywu (np. themeToggle):
-    const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle) {
-        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-        
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-        });
-    }
-});
+    // 1. IMPORTY MUSZĄ BYĆ NA SAMYM POCZĄTKU SKRYPTU TYPU MODULE
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // Ta sama konfiguracja bazy co w głównym pliku
     const firebaseConfig = {
         apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
         authDomain: "rachunki-realtime.firebaseapp.com",
@@ -192,13 +172,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const grandTotalSpan = document.getElementById('grandTotal');
         const themeToggle = document.getElementById('themeToggle');
 
-        // Obsługa motywu
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-        });
+        // 2. TUTAJ JEST ODPOWIEDNIE MIEJSCE NA INICJALIZACJĘ I SYNCHRONIZACJĘ MOTYWU
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        if (themeToggle) {
+            themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // Obsługa kliknięcia zmiany motywu ze stałym zapisem w przeglądarce
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            });
+        }
 
         // Generowanie listy miesięcy
         const currentYear = new Date().getFullYear();
@@ -244,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (totals[catName]) {
                     totals[catName].sum += amount;
                     totals[catName].count += 1;
-                    totals[catName].ids.push(id); // zapamiętujemy ID wpisów, by móc je opcjonalnie wyczyścić
+                    totals[catName].ids.push(id); 
                 } else {
                     totals[catName] = { sum: amount, count: 1, ids: [id] };
                 }
