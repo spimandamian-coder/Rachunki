@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje Rachunki - Statystyki Wydatków</title>
+    <style>
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-main: #212529;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        [data-theme="dark"] {
+            --bg-primary: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #f8f9fa;
+            --text-muted: #a0a0a0;
+            --border-color: #333333;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        .header-zone {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .dashboard-box {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            position: relative;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+        .btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            border: none;
+            transition: opacity 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background-color: #28a745; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .input-style {
+            padding: 10px;
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-zone">
+        <h1 style="margin: 0; font-weight: 700; font-size: 28px;">📊 Statystyki Wydatków</h1>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="index.html" class="btn btn-secondary" style="font-size: 14px; padding: 8px 15px;">⬅️ Powrót</a>
+            <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
+        </div>
+    </div>
+    
+    <div class="dashboard-box">
+        <div>
+            <label for="monthSelect" style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 5px; color: var(--text-muted);">MIESIĄC ANALIZY</label>
+            <select id="monthSelect" class="input-style" style="font-size: 16px; font-weight: 600; width: 200px;"></select>
+        </div>
+        
+        <div style="display: flex; gap: 40px;">
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">SUMA WSZYSTKICH WYDATKÓW</span>
+                <span style="color: #c62828; font-size: 28px; font-weight: 700;"><span id="grandTotal">0.00</span> zł</span>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 30px; display: flex; gap: 10px; flex-wrap: wrap; background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">SKLEP / KATEGORIA</label>
+            <input type="text" id="expenseCategory" placeholder="np. Biedronka, Lidl, Paliwo..." class="input-style" style="width: 250px;">
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">KWOTA (zł)</label>
+            <input type="number" step="0.01" id="expenseAmount" placeholder="0.00" class="input-style" style="width: 120px;">
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+            <button id="addExpenseBtn" class="btn btn-primary" style="height: 41px;">➕ Dodaj wydatek</button>
+        </div>
+    </div>
+
+    <h3 style="margin-bottom: 15px;">Sumaryczne wydatki w tym miesiącu:</h3>
+    <div id="statsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // Ta sama konfiguracja bazy co w głównym pliku
+    const firebaseConfig = {
+        apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
+        authDomain: "rachunki-realtime.firebaseapp.com",
+        databaseURL: "https://rachunki-realtime-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "rachunki-realtime",
+        storageBucket: "rachunki-realtime.firebasestorage.app",
+        messagingSenderId: "1024588826825",
+        appId: "1:1024588826825:web:bcba5bb7172aaf9eafa518"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+
+    function getCategoryIcon(name) {
+        const lower = name.toLowerCase();
+        if (lower.includes('biedronka')) return '🐞';
+        if (lower.includes('lidl') || lower.includes('kaufland') || lower.includes('sklep')) return '🛒';
+        if (lower.includes('paliwo') || lower.includes('auto') || lower.includes('orlen')) return '🚗';
+        if (lower.includes('jedzenie') || lower.includes('restauracja')) return '🍕';
+        return '💰';
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const monthSelect = document.getElementById('monthSelect');
+        const statsGrid = document.getElementById('statsGrid');
+        const categoryInput = document.getElementById('expenseCategory');
+        const amountInput = document.getElementById('expenseAmount');
+        const addExpenseBtn = document.getElementById('addExpenseBtn');
+        const grandTotalSpan = document.getElementById('grandTotal');
+        const themeToggle = document.getElementById('themeToggle');
+
+        // Obsługa motywu
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+
+        // Generowanie listy miesięcy
+        const currentYear = new Date().getFullYear();
+        [currentYear, currentYear + 1].forEach(year => {
+            months.forEach((month, index) => {
+                let option = document.createElement('option');
+                option.value = `${year}-${index}`;
+                option.textContent = `${month} ${year}`;
+                monthSelect.appendChild(option);
+            });
+        });
+        monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
+
+        // Nasłuchiwanie wpisów w bazie danych dla wybranego miesiąca
+        function listenToExpenses() {
+            const expensesRef = ref(db, `daily_expenses/${monthSelect.value}`);
+            onValue(expensesRef, (snapshot) => {
+                const data = snapshot.val();
+                renderStats(data);
+            });
+        }
+
+        // Agregacja danych: sumowanie po nazwach kategorii
+        function renderStats(data) {
+            statsGrid.innerHTML = '';
+            if (!data) {
+                grandTotalSpan.textContent = "0.00";
+                statsGrid.innerHTML = '<div style="color:var(--text-muted)">Brak wpisów dla tego miesiąca.</div>';
+                return;
+            }
+
+            const totals = {};
+            let grandTotal = 0;
+
+            // Zliczanie sumy dla każdej unikalnej nazwy (np. Biedronka)
+            Object.keys(data).forEach(id => {
+                const item = data[id];
+                const catName = item.category.trim();
+                const amount = parseFloat(item.amount) || 0;
+
+                grandTotal += amount;
+
+                if (totals[catName]) {
+                    totals[catName].sum += amount;
+                    totals[catName].count += 1;
+                    totals[catName].ids.push(id); // zapamiętujemy ID wpisów, by móc je opcjonalnie wyczyścić
+                } else {
+                    totals[catName] = { sum: amount, count: 1, ids: [id] };
+                }
+            });
+
+            grandTotalSpan.textContent = grandTotal.toFixed(2);
+
+            // Budowanie kafelków statystyk
+            Object.keys(totals).sort().forEach(catName => {
+                const info = totals[catName];
+                const icon = getCategoryIcon(catName);
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                
+                card.innerHTML = `
+                    <button class="clear-cat-btn" style="position: absolute; top: 12px; right: 15px; background: none; border: none; font-size: 18px; cursor: pointer; color: #c62828; opacity: 0.6;">🗑️</button>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <span style="font-size: 28px;">${icon}</span>
+                        <div>
+                            <strong style="font-size: 18px; display: block;">${catName}</strong>
+                            <span style="font-size: 12px; color: var(--text-muted);">Liczba zakupów: ${info.count}</span>
+                        </div>
+                    </div>
+                    <div style="font-size: 22px; font-weight: 700; color: #c62828; text-align: right;">
+                        ${info.sum.toFixed(2)} <span style="font-size: 14px;">zł</span>
+                    </div>
+                `;
+
+                // Usuwanie wszystkich wpisów z danej kategorii
+                card.querySelector('.clear-cat-btn').addEventListener('click', () => {
+                    if (confirm(`Czy chcesz usunąć wszystkie wpisy dla kategorii "${catName}"?`)) {
+                        info.ids.forEach(id => {
+                            remove(ref(db, `daily_expenses/${monthSelect.value}/${id}`));
+                        });
+                    }
+                });
+
+                statsGrid.appendChild(card);
+            });
+        }
+
+        // Zapisywanie nowego wydatku do bazy
+        function handleAddExpense() {
+            const category = categoryInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+
+            if (!category || isNaN(amount) || amount <= 0) {
+                alert("Wprowadź poprawną nazwę kategorii/sklepu oraz kwotę!");
+                return;
+            }
+
+            const expensesRef = ref(db, `daily_expenses/${monthSelect.value}`);
+            push(expensesRef, {
+                category: category,
+                amount: amount,
+                timestamp: new Date().toISOString()
+            }).then(() => {
+                categoryInput.value = '';
+                amountInput.value = '';
+                categoryInput.focus();
+            });
+        }
+
+        addExpenseBtn.addEventListener('click', handleAddExpense);
+        amountInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAddExpense(); });
+        monthSelect.addEventListener('change', listenToExpenses);
+
+        listenToExpenses();
+    });
+</script>
+</body>
+</html>
