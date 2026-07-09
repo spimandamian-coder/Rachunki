@@ -3,84 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moje Rachunki - Statystyki Wydatków</title>
+    <title>Moje Rachunki - Panel Statystyk i Historii</title>
     <style>
-        /* WYMUSZENIE TRYBU CIEMNEGO JAKO DOMYŚLNEGO */
+        /* PROFESJONALNA PALETA BARW - NATYWNY TRYB CIEMNY */
         :root {
-            --bg-primary: #121212;
-            --bg-card: #1e1e1e;
-            --text-main: #f8f9fa;
-            --text-muted: #a0a0a0;
-            --border-color: #333333;
-            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+            --bg-primary: #0b0f19;
+            --bg-card: #151f32;
+            --bg-input: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --border-color: #334155;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
         body {
             background-color: var(--bg-primary);
             color: var(--text-main);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            transition: background-color 0.3s, color 0.3s;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 0;
+            -webkit-font-smoothing: antialiased;
         }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 30px 20px;
+            padding: 40px 20px;
         }
+
+        /* NAGŁÓWEK */
         .header-zone {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 35px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
         }
+
+        .header-zone h1 {
+            margin: 0;
+            font-weight: 800;
+            font-size: 32px;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #34d399, #059669);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* DASHBOARD I FILTRY */
         .dashboard-box {
             background: var(--bg-card);
             border-radius: 16px;
             padding: 24px;
             box-shadow: var(--shadow);
             border: 1px solid var(--border-color);
-            margin-bottom: 30px;
+            margin-bottom: 35px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 30px;
         }
-        .stat-card {
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* FORMULARZE */
+        .form-box {
             background: var(--bg-card);
+            padding: 24px;
+            border-radius: 16px;
             border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 20px;
-            position: relative;
             box-shadow: var(--shadow);
-            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 40px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: flex-end;
         }
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+            min-width: 200px;
         }
+
+        .input-group.short {
+            flex: 0 1 150px;
+            min-width: 120px;
+        }
+
+        label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .input-style {
+            padding: 12px 16px;
+            background: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            outline: none;
+            font-size: 15px;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .input-style:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+
+        /* PRZYCISKI */
         .btn {
-            padding: 10px 20px;
+            padding: 12px 24px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            border-radius: 8px;
+            border-radius: 10px;
             border: none;
-            transition: opacity 0.2s;
+            transition: var(--transition);
             text-decoration: none;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: inherit;
         }
-        .btn:hover { opacity: 0.9; }
-        .btn-primary { background-color: #28a745; color: white; }
-        .btn-secondary { background-color: #6c757d; color: white; }
-        .input-style {
-            padding: 10px;
+
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        .btn-secondary { background-color: #334155; color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background-color: #475569; }
+
+        /* KAFELKI STATYSTYK */
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #f1f5f9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 45px;
+        }
+
+        .stat-card {
             background: var(--bg-card);
-            color: var(--text-main);
             border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 22px;
+            position: relative;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: #475569;
+        }
+
+        .clear-cat-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(239, 68, 68, 0.1);
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--danger);
+            padding: 6px;
             border-radius: 8px;
-            outline: none;
+            transition: var(--transition);
+        }
+
+        .clear-cat-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* TABELA HISTORII */
+        .table-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .history-table th {
+            background: #1e293b;
+            padding: 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .history-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: #e2e8f0;
+        }
+
+        .history-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .history-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .delete-row-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-muted);
+            transition: var(--transition);
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .delete-row-btn:hover {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .empty-state {
+            color: var(--text-muted);
+            padding: 30px;
+            text-align: center;
+            font-style: italic;
         }
     </style>
 </head>
@@ -88,47 +273,65 @@
 
 <div class="container">
     <div class="header-zone">
-        <h1 style="margin: 0; font-weight: 700; font-size: 28px;">📊 Statystyki Wydatków</h1>
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <a href="index.html" class="btn btn-secondary" style="font-size: 14px; padding: 8px 15px;">⬅️ Powrót</a>
+        <h1>📊 Panel Statystyk i Analiz</h1>
+        <div>
+            <a href="index.html" class="btn btn-secondary">⬅️ Powrót do Menu</a>
         </div>
     </div>
     
     <div class="dashboard-box">
-        <div>
-            <label for="monthSelect" style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 5px; color: var(--text-muted);">MIESIĄC ANALIZY</label>
-            <select id="monthSelect" class="input-style" style="font-size: 16px; font-weight: 600; width: 200px;"></select>
+        <div class="filter-group">
+            <label for="monthSelect">Okres analizy</label>
+            <select id="monthSelect" class="input-style" style="font-size: 15px; font-weight: 600; width: 220px;"></select>
         </div>
         
         <div style="display: flex; gap: 40px;">
-            <div style="display: flex; flex-direction: column; justify-content: center;">
-                <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">SUMA WSZYSTKICH WYDATKÓW</span>
-                <span style="color: #c62828; font-size: 28px; font-weight: 700;"><span id="grandTotal">0.00</span> zł</span>
+            <div style="display: flex; flex-direction: column; justify-content: center; text-align: right;">
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">SUMA WYDATKÓW W OKRESIE</span>
+                <span style="color: #f43f5e; font-size: 32px; font-weight: 800; letter-spacing: -0.02em;"><span id="grandTotal">0.00</span> zł</span>
             </div>
         </div>
     </div>
 
-    <div style="margin-bottom: 30px; display: flex; gap: 10px; flex-wrap: wrap; background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
-        <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">SKLEP / KATEGORIA</label>
-            <input type="text" id="expenseCategory" placeholder="np. Biedronka, Lidl, Paliwo..." class="input-style" style="width: 250px;">
+    <div class="form-box">
+        <div class="input-group">
+            <label>Sklep / Miejsce / Kategoria</label>
+            <input type="text" id="expenseCategory" placeholder="np. Biedronka, Lidl, Orlen..." class="input-style">
         </div>
-        <div style="display: flex; flex-direction: column; gap: 5px;">
-            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">KWOTA (zł)</label>
-            <input type="number" step="0.01" id="expenseAmount" placeholder="0.00" class="input-style" style="width: 120px;">
+        <div class="input-group short">
+            <label>Kwota (zł)</label>
+            <input type="number" step="0.01" id="expenseAmount" placeholder="0.00" class="input-style">
         </div>
-        <div style="display: flex; align-items: flex-end;">
-            <button id="addExpenseBtn" class="btn btn-primary" style="height: 41px;">➕ Dodaj wydatek</button>
+        <div>
+            <button id="addExpenseBtn" class="btn btn-primary">➕ Dodaj transakcję</button>
         </div>
     </div>
 
-    <h3 style="margin-bottom: 15px;">Sumaryczne wydatki w tym miesiącu:</h3>
-    <div id="statsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;"></div>
+    <div class="section-title"><span>🛍️</span> Podsumowanie kategorii</div>
+    <div id="statsGrid" class="stats-grid"></div>
+
+    <div class="section-title" style="margin-top: 40px;"><span>🕒</span> Chronologiczna historia transakcji</div>
+    <div class="table-container">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Data zakupu</th>
+                    <th>Godzina</th>
+                    <th>Kategoria / Sklep</th>
+                    <th style="text-align: right;">Kwota</th>
+                    <th style="text-align: center; width: 60px;">Akcja</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                </tbody>
+        </table>
+        <div id="tableEmptyState" class="empty-state" style="display: none;">Brak operacji zarejestrowanych w tym miesiącu.</div>
+    </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
@@ -148,9 +351,9 @@
     function getCategoryIcon(name) {
         const lower = name.toLowerCase();
         if (lower.includes('biedronka')) return '🐞';
-        if (lower.includes('lidl') || lower.includes('kaufland') || lower.includes('sklep')) return '🛒';
-        if (lower.includes('paliwo') || lower.includes('auto') || lower.includes('orlen')) return '🚗';
-        if (lower.includes('jedzenie') || lower.includes('restauracja')) return '🍕';
+        if (lower.includes('lidl') || lower.includes('kaufland') || lower.includes('sklep') || lower.includes('żabka')) return '🛒';
+        if (lower.includes('paliwo') || lower.includes('auto') || lower.includes('orlen') || lower.includes('shell')) return '🚗';
+        if (lower.includes('jedzenie') || lower.includes('restauracja') || lower.includes('pizza')) return '🍕';
         return '💰';
     }
 
@@ -161,8 +364,10 @@
         const amountInput = document.getElementById('expenseAmount');
         const addExpenseBtn = document.getElementById('addExpenseBtn');
         const grandTotalSpan = document.getElementById('grandTotal');
+        const historyTableBody = document.getElementById('historyTableBody');
+        const tableEmptyState = document.getElementById('tableEmptyState');
 
-        // WYMUSZENIE ATRYBUTU DLA HTML NA START
+        // NATYWNE WYMUSZENIE REKURENCYJNEGO ATOMOWEGO TRYBU CIEMNEGO
         document.documentElement.setAttribute('data-theme', 'dark');
 
         // Generowanie listy miesięcy
@@ -177,34 +382,52 @@
         });
         monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
-        // Nasłuchiwanie wpisów w bazie danych dla wybranego miesiąca
+        // Główny nasłuch zmian z bazy danych
         function listenToExpenses() {
             const expensesRef = ref(db, `daily_expenses/${monthSelect.value}`);
             onValue(expensesRef, (snapshot) => {
                 const data = snapshot.val();
-                renderStats(data);
+                renderAllPanels(data);
             });
         }
 
-        // Agregacja danych: sumowanie po nazwach kategorii
-        function renderStats(data) {
+        // Renderowanie kafelków statystyk oraz tabeli historii transakcji
+        function renderAllPanels(data) {
             statsGrid.innerHTML = '';
+            historyTableBody.innerHTML = '';
+
             if (!data) {
                 grandTotalSpan.textContent = "0.00";
-                statsGrid.innerHTML = '<div style="color:var(--text-muted)">Brak wpisów dla tego miesiąca.</div>';
+                statsGrid.innerHTML = '<div style="color:var(--text-muted); font-style: italic;">Brak wpisów dla tego okresu.</div>';
+                tableEmptyState.style.display = 'block';
                 return;
             }
 
+            tableEmptyState.style.display = 'none';
             const totals = {};
             let grandTotal = 0;
+            const historyList = [];
 
+            // Przetwarzanie obiektów z bazy danych
             Object.keys(data).forEach(id => {
                 const item = data[id];
                 const catName = item.category.trim();
                 const amount = parseFloat(item.amount) || 0;
+                
+                // Parsowanie ISO daty lub przypisanie domyślnej
+                let dateStr = "Brak danych";
+                let timeStr = "--:--";
+                if (item.timestamp) {
+                    const d = new Date(item.timestamp);
+                    if (!isNaN(d.getTime())) {
+                        dateStr = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        timeStr = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                    }
+                }
 
                 grandTotal += amount;
 
+                // Agregacja dla kafelków
                 if (totals[catName]) {
                     totals[catName].sum += amount;
                     totals[catName].count += 1;
@@ -212,10 +435,22 @@
                 } else {
                     totals[catName] = { sum: amount, count: 1, ids: [id] };
                 }
+
+                // Lista do tabeli historycznej
+                historyList.push({
+                    id: id,
+                    category: catName,
+                    amount: amount,
+                    date: dateStr,
+                    time: timeStr,
+                    rawTimestamp: item.timestamp || ""
+                });
             });
 
+            // Aktualizacja sumy głównej
             grandTotalSpan.textContent = grandTotal.toFixed(2);
 
+            // 1. BUDOWANIE KAFELKÓW STATYSTYCZNYCH
             Object.keys(totals).sort().forEach(catName => {
                 const info = totals[catName];
                 const icon = getCategoryIcon(catName);
@@ -223,21 +458,22 @@
                 card.className = 'stat-card';
                 
                 card.innerHTML = `
-                    <button class="clear-cat-btn" style="position: absolute; top: 12px; right: 15px; background: none; border: none; font-size: 18px; cursor: pointer; color: #c62828; opacity: 0.6;">🗑️</button>
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                        <span style="font-size: 28px;">${icon}</span>
+                    <button class="clear-cat-btn" title="Usuń całą kategorię">🗑️</button>
+                    <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+                        <span style="font-size: 32px;">${icon}</span>
                         <div>
-                            <strong style="font-size: 18px; display: block;">${catName}</strong>
-                            <span style="font-size: 12px; color: var(--text-muted);">Liczba zakupów: ${info.count}</span>
+                            <strong style="font-size: 16px; display: block; color:#f1f5f9;">${catName}</strong>
+                            <span style="font-size: 12px; color: var(--text-muted);">Transakcje: ${info.count}</span>
                         </div>
                     </div>
-                    <div style="font-size: 22px; font-weight: 700; color: #c62828; text-align: right;">
-                        ${info.sum.toFixed(2)} <span style="font-size: 14px;">zł</span>
+                    <div style="font-size: 24px; font-weight: 800; color: #f43f5e; text-align: right; letter-spacing: -0.01em;">
+                        ${info.sum.toFixed(2)} <span style="font-size: 14px; font-weight:500; color:var(--text-muted)">zł</span>
                     </div>
                 `;
 
+                // Usuwanie całej kategorii
                 card.querySelector('.clear-cat-btn').addEventListener('click', () => {
-                    if (confirm(`Czy chcesz usunąć wszystkie wpisy dla kategorii "${catName}"?`)) {
+                    if (confirm(`Czy chcesz usunąć absolutnie wszystkie wpisy dla kategorii "${catName}"?`)) {
                         info.ids.forEach(id => {
                             remove(ref(db, `daily_expenses/${monthSelect.value}/${id}`));
                         });
@@ -246,14 +482,42 @@
 
                 statsGrid.appendChild(card);
             });
+
+            // 2. BUDOWANIE CHRONOLOGICZNEJ TABELI (od najnowszych)
+            historyList.sort((a, b) => b.rawTimestamp.localeCompare(a.rawTimestamp));
+
+            historyList.forEach(item => {
+                const tr = document.createElement('tr');
+                const icon = getCategoryIcon(item.category);
+                
+                tr.innerHTML = `
+                    <td style="font-weight: 500;">${item.date}</td>
+                    <td style="color: var(--text-muted);">${item.time}</td>
+                    <td><span style="margin-right:6px;">${icon}</span> <strong>${item.category}</strong></td>
+                    <td style="text-align: right; font-weight: 700; color: #ef4444;">${item.amount.toFixed(2)} zł</td>
+                    <td style="text-align: center;">
+                        <button class="delete-row-btn" title="Usuń ten wpis">❌</button>
+                    </td>
+                `;
+
+                // Usuwanie pojedynczego wiersza z bazy danych
+                tr.querySelector('.delete-row-btn').addEventListener('click', () => {
+                    if (confirm(`Usunąć wydatek: ${item.category} na kwotę ${item.amount.toFixed(2)} zł?`)) {
+                        remove(ref(db, `daily_expenses/${monthSelect.value}/${item.id}`));
+                    }
+                });
+
+                historyTableBody.appendChild(tr);
+            });
         }
 
+        // Akcja dodawania wpisu z zapisem timestampu (data + godzina)
         function handleAddExpense() {
             const category = categoryInput.value.trim();
             const amount = parseFloat(amountInput.value);
 
             if (!category || isNaN(amount) || amount <= 0) {
-                alert("Wprowadź poprawną nazwę kategorii/sklepu oraz kwotę!");
+                alert("Wprowadź prawidłową nazwę oraz kwotę!");
                 return;
             }
 
@@ -261,7 +525,7 @@
             push(expensesRef, {
                 category: category,
                 amount: amount,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString() // Generuje kompletną datę i godzinę
             }).then(() => {
                 categoryInput.value = '';
                 amountInput.value = '';
