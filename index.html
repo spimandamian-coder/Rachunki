@@ -150,17 +150,17 @@
 </head>
 <body>
 
-<!-- GŁÓWNA ZAWARTOŚĆ (WIDOCZNA OD RAZU) -->
 <div id="mainContent" class="container">
     <div class="header-zone">
         <h1 style="margin: 0; font-weight: 700; font-size: 28px;">🎛️ FinanseDomowe</h1>
         <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="statystyki.html" class="btn btn-primary" style="background-color: #28a745; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">📊 Statystyki</a>
+            
             <span id="lockStatus" style="font-size: 13px; font-weight: 600; color: #6c757d; background: var(--bg-card); padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border-color);">🔒 Tylko podgląd</span>
             <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
         </div>
     </div>
     
-    <!-- DASHBOARD Z WYKRESEM -->
     <div class="dashboard-box">
         <div style="display: flex; flex-direction: column; gap: 15px;">
             <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
@@ -187,23 +187,19 @@
             </div>
         </div>
 
-        <!-- WYKRES -->
         <div class="chart-container">
             <canvas id="miniChart" width="120" height="120"></canvas>
         </div>
     </div>
 
-    <!-- PANEL DODAWANIA -->
     <div style="margin-bottom: 30px; display: flex; gap: 10px; flex-wrap: wrap;">
         <input type="text" id="newBillName" placeholder="Nazwa nowego rachunku np. Prąd Armii..." class="input-style" style="width: 300px; font-size: 15px;">
         <button onclick="window.addNewBill()" class="btn btn-primary">➕ Dodaj rachunek</button>
     </div>
 
-    <!-- SIATKA RACHUNKÓW -->
     <div id="billsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;"></div>
 </div>
 
-<!-- OKNO MODALNE (HISTORIA LOGÓW) -->
 <div id="logsModal" class="modal-backdrop">
     <div class="modal-content">
         <div class="modal-header">
@@ -216,7 +212,6 @@
     </div>
 </div>
 
-<!-- SKRYPT VALIDACJI PINU PRZY EDYCJI -->
 <script>
     const CORRECT_PIN = "1234"; // Twój kod PIN
     window.isAppUnlocked = false; // Status uprawnień do edycji
@@ -242,7 +237,6 @@
     }
 </script>
 
-<!-- SKRYPT FIREBASE + LOGIKA -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, onValue, update, get, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -465,7 +459,6 @@
 
                 // BLOKADA CHECKBOXA PINEM
                 card.querySelector('.paid-checkbox').addEventListener('click', (e) => {
-                    // Ponieważ to jest kliknięcie w checkbox, musimy zapobiec domyślnej akcji zmiany stanu, dopóki PIN nie przejdzie
                     if (!checkPermission()) {
                         e.preventDefault();
                         return;
