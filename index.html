@@ -289,20 +289,24 @@
         const canvas = document.getElementById('miniChart');
         const ctx = canvas.getContext('2d');
         
-        const logsModal = document.getElementById('logsModal');
-        const openLogsBtn = document.getElementById('openLogsBtn');
-        const closeLogsBtn = document.getElementById('closeLogsBtn');
-        const modalLogBody = document.getElementById('modalLogBody');
-
         let debounceTimer;
+
+        // --- ZAKTUALIZOWANA OBSŁUGA MOTYWU (ZAPIS I ODCZYT Z LOCALSTORAGE) ---
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
 
         themeToggle.addEventListener('click', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
             document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
             themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-            drawChart(parseFloat(totalPaidSpan.textContent), parseFloat(totalUnpaidSpan.textContent));
+            drawChart(parseFloat(totalPaidSpan.textContent) || 0, parseFloat(totalUnpaidSpan.textContent) || 0);
         });
+        // --- KONIEC ZMIAN W MOTYWIE ---
 
         const currentYear = new Date().getFullYear();
         const yearsToGenerate = [currentYear, currentYear + 1];
@@ -575,7 +579,7 @@
             }
 
             const prevMonthKey = `${year}-${monthIdx}`;
-            if (confirm(`Czy chcesz skopiować wszystkie kafelki, nazwy oraz kwoty z miesiąca ${months[monthIdx]} ${year}?`)) {
+            if (confirm(`Czy chcesz skopiować wszystkie kafelki, nazwy oraz kwoty z miasta ${months[monthIdx]} ${year}?`)) {
                 const prevMonthRef = ref(db, `months_data/${prevMonthKey}`);
                 const snapshot = await get(prevMonthRef);
                 if (snapshot.exists()) {
@@ -650,7 +654,7 @@
 
         function removeBillFromCurrentMonth(name) {
             const billId = createBillId(name);
-            if (confirm(`Czy usunąć rachunek "${name}" TYLKO z wybranego miesiąca?`)) {
+            if (confirm(`Czy usunąć rachunek "${name}" TYLKO z wybranego miasta?`)) {
                 set(ref(db, `months_data/${monthSelect.value}/${billId}`), null);
                 logEvent(`[${getFriendlyMonthName(monthSelect.value)}] Usunięto kafelek rachunku: "${name}"`);
             }
