@@ -5,15 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Moje Rachunki - Statystyki Wydatków</title>
     <style>
+        /* WYMUSZENIE TRYBU CIEMNEGO JAKO DOMYŚLNEGO */
         :root {
-            --bg-primary: #f8f9fa;
-            --bg-card: #ffffff;
-            --text-main: #212529;
-            --text-muted: #6c757d;
-            --border-color: #dee2e6;
-            --shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        [data-theme="dark"] {
             --bg-primary: #121212;
             --bg-card: #1e1e1e;
             --text-main: #f8f9fa;
@@ -98,7 +91,6 @@
         <h1 style="margin: 0; font-weight: 700; font-size: 28px;">📊 Statystyki Wydatków</h1>
         <div style="display: flex; gap: 10px; align-items: center;">
             <a href="index.html" class="btn btn-secondary" style="font-size: 14px; padding: 8px 15px;">⬅️ Powrót</a>
-            <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
         </div>
     </div>
     
@@ -135,7 +127,6 @@
 </div>
 
 <script type="module">
-    // 1. IMPORTY MUSZĄ BYĆ NA SAMYM POCZĄTKU SKRYPTU TYPU MODULE
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -170,26 +161,9 @@
         const amountInput = document.getElementById('expenseAmount');
         const addExpenseBtn = document.getElementById('addExpenseBtn');
         const grandTotalSpan = document.getElementById('grandTotal');
-        const themeToggle = document.getElementById('themeToggle');
 
-        // 2. TUTAJ JEST ODPOWIEDNIE MIEJSCE NA INICJALIZACJĘ I SYNCHRONIZACJĘ MOTYWU
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        if (themeToggle) {
-            themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-        }
-
-        // Obsługa kliknięcia zmiany motywu ze stałym zapisem w przeglądarce
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => {
-                const currentTheme = document.documentElement.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                
-                document.documentElement.setAttribute('data-theme', newTheme);
-                localStorage.setItem('theme', newTheme);
-                themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-            });
-        }
+        // WYMUSZENIE ATRYBUTU DLA HTML NA START
+        document.documentElement.setAttribute('data-theme', 'dark');
 
         // Generowanie listy miesięcy
         const currentYear = new Date().getFullYear();
@@ -224,7 +198,6 @@
             const totals = {};
             let grandTotal = 0;
 
-            // Zliczanie sumy dla każdej unikalnej nazwy (np. Biedronka)
             Object.keys(data).forEach(id => {
                 const item = data[id];
                 const catName = item.category.trim();
@@ -243,7 +216,6 @@
 
             grandTotalSpan.textContent = grandTotal.toFixed(2);
 
-            // Budowanie kafelków statystyk
             Object.keys(totals).sort().forEach(catName => {
                 const info = totals[catName];
                 const icon = getCategoryIcon(catName);
@@ -264,7 +236,6 @@
                     </div>
                 `;
 
-                // Usuwanie wszystkich wpisów z danej kategorii
                 card.querySelector('.clear-cat-btn').addEventListener('click', () => {
                     if (confirm(`Czy chcesz usunąć wszystkie wpisy dla kategorii "${catName}"?`)) {
                         info.ids.forEach(id => {
@@ -277,7 +248,6 @@
             });
         }
 
-        // Zapisywanie nowego wydatku do bazy
         function handleAddExpense() {
             const category = categoryInput.value.trim();
             const amount = parseFloat(amountInput.value);
