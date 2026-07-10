@@ -154,7 +154,7 @@
     <div class="header-zone">
         <h1 style="margin: 0; font-weight: 700; font-size: 28px;">🎛️ FinanseDomowe</h1>
         <div style="display: flex; gap: 10px; align-items: center;">
-            <a href="statystyki.html" class="btn btn-primary" style="background-color: #28a745; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">📊 Statystyki</a>
+            <button id="statsBtn" class="btn btn-primary" style="background-color: #28a745; display: inline-flex; align-items: center; gap: 5px;">📊 Statystyki</button>
             
             <span id="lockStatus" style="font-size: 13px; font-weight: 600; color: #6c757d; background: var(--bg-card); padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border-color);">🔒 Tylko podgląd</span>
             <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
@@ -707,6 +707,16 @@
         });
         
         newBillNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewBill(); });
+
+        // --- DODANA BLOKADA PRZYCISKU STATYSTYK PINEM ---
+        const statsBtn = document.getElementById('statsBtn');
+        if (statsBtn) {
+            statsBtn.addEventListener('click', () => {
+                if (window.checkPermission()) {
+                    window.location.href = 'statystyki.html';
+                }
+            });
+        }
 
         listenToMonthData();
     });
