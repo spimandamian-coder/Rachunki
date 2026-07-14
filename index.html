@@ -80,6 +80,7 @@
         .btn:hover { opacity: 0.9; }
         .btn-primary { background-color: #007bff; color: white; }
         .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
         .input-style {
             padding: 10px;
             background: var(--bg-card);
@@ -94,7 +95,7 @@
             height: 120px;
         }
         
-        /* STYLE DLA OKNA MODALNEGO LOGÓW */
+        /* STYLE DLA MODALA LOGÓW */
         .modal-backdrop {
             display: none;
             position: fixed;
@@ -142,6 +143,31 @@
             font-family: monospace;
         }
 
+        /* EKRAN LOGOWANIA */
+        .login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-primary);
+        }
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -150,13 +176,26 @@
 </head>
 <body>
 
-<div id="mainContent" class="container">
+<!-- PANEL LOGOWANIA (WIDOCZNY DOMYŚLNIE) -->
+<div id="loginZone" class="login-screen">
+    <div class="login-card">
+        <h2 style="margin: 0 0 10px 0; font-size: 24px;">🎛️ FinanseDomowe</h2>
+        <p style="color: var(--text-muted); margin: 0; font-size: 14px;">Zaloguj się, aby zarządzać rachunkami</p>
+        <form id="loginForm" class="login-form">
+            <input type="email" id="loginEmail" placeholder="Adres e-mail" class="input-style" required>
+            <input type="password" id="loginPassword" placeholder="Hasło" class="input-style" required>
+            <button type="submit" class="btn btn-primary" style="padding: 12px;">Zaloguj się</button>
+        </form>
+    </div>
+</div>
+
+<!-- GŁÓWNY PANEL APLIKACJI (UKRYTY DO MOMENTU ZALOGOWANIA) -->
+<div id="mainContent" class="container" style="display: none;">
     <div class="header-zone">
         <h1 style="margin: 0; font-weight: 700; font-size: 28px;">🎛️ FinanseDomowe</h1>
         <div style="display: flex; gap: 10px; align-items: center;">
             <button id="statsBtn" class="btn btn-primary" style="background-color: #28a745; display: inline-flex; align-items: center; gap: 5px;">📊</button>
-            
-            <span id="lockStatus" style="font-size: 13px; font-weight: 600; color: #6c757d; background: var(--bg-card); padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border-color);">🔒 Tylko podgląd</span>
+            <button id="logoutBtn" class="btn btn-danger" style="font-size: 13px; padding: 8px 15px;">Wyloguj</button>
             <button id="themeToggle" class="btn btn-secondary" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-main); font-size: 20px; padding: 5px 12px;">🌙</button>
         </div>
     </div>
@@ -192,14 +231,15 @@
         </div>
     </div>
 
-    <div style="margin-bottom: 30px; display: flex; gap: 10px; flex-wrap: wrap;">
-        <input type="text" id="newBillName" placeholder="Nazwa nowego rachunku np. Prąd Armii..." class="input-style" style="width: 300px; font-size: 15px;">
-        <button onclick="window.addNewBill()" class="btn btn-primary">➕ Dodaj rachunek</button>
+    <div style="max-width: 500px; margin-bottom: 30px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="newBillName" placeholder="Nazwa nowego rachunku np. Prąd Armii..." class="input-style" style="flex-grow: 1; font-size: 15px;">
+        <button id="addBillBtn" class="btn btn-primary">➕ Dodaj rachunek</button>
     </div>
 
     <div id="billsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;"></div>
 </div>
 
+<!-- MODAL LOGÓW -->
 <div id="logsModal" class="modal-backdrop">
     <div class="modal-content">
         <div class="modal-header">
@@ -212,34 +252,11 @@
     </div>
 </div>
 
-<script>
-    const CORRECT_PIN = "6969"; // Twój kod PIN
-    window.isAppUnlocked = false; // Status uprawnień do edycji
-
-    // Funkcja sprawdzająca uprawnienia przed wykonaniem jakiejkolwiek akcji zapisu/edycji
-    function checkPermission() {
-        if (window.isAppUnlocked) return true;
-        
-        const pin = prompt("🔐 Ta akcja wymaga autoryzacji. Wprowadź kod PIN:");
-        if (pin === CORRECT_PIN) {
-            window.isAppUnlocked = true;
-            const statusEl = document.getElementById('lockStatus');
-            if (statusEl) {
-                statusEl.textContent = "🔓 Edycja włączona";
-                statusEl.style.color = "#2e7d32";
-                statusEl.style.borderColor = "#2e7d32";
-            }
-            return true;
-        } else if (pin !== null) {
-            alert("❌ Niepoprawny kod PIN! Działanie zostało zablokowane.");
-        }
-        return false;
-    }
-</script>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, onValue, update, get, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    // DODANY MODUŁ AUTHENTICATION
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
@@ -254,6 +271,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const auth = getAuth(app); // Inicjalizacja uwierzytelniania
 
     const defaultBills = [
         "Internet Play", "Woda Tuwima", "Czynsz Tuwima", "Czynsz Armii",
@@ -277,7 +295,45 @@
         return '📄';
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
+    // --- STRUKTURA OBSŁUGI OBSZARÓW WIDOCZNOŚCI ---
+    const loginZone = document.getElementById('loginZone');
+    const mainContent = document.getElementById('mainContent');
+    const loginForm = document.getElementById('loginForm');
+
+    // Obsługa logowania formularzem
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPassword').value;
+
+        signInWithEmailAndPassword(auth, email, pass)
+            .catch(err => {
+                alert("❌ Błąd logowania: Niepoprawny login lub hasło!");
+                console.error(err);
+            });
+    });
+
+    // Obsługa przycisku Wyloguj
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        signOut(auth);
+    });
+
+    // Monitorowanie stanu zalogowania
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Zalogowany -> pokaż aplikację, ukryj logowanie
+            loginZone.style.display = 'none';
+            mainContent.style.display = 'block';
+            initDashboard();
+        } else {
+            // Niezalogowany -> pokaż logowanie, ukryj aplikację
+            loginZone.style.display = 'flex';
+            mainContent.style.display = 'none';
+        }
+    });
+
+    // Zamknięcie funkcji w initDashboard, aby uruchamiała się tylko dla autoryzowanego sesyjnie użytkownika
+    function initDashboard() {
         const monthSelect = document.getElementById('monthSelect');
         const billsGrid = document.getElementById('billsGrid');
         const newBillNameInput = document.getElementById('newBillName');
@@ -286,27 +342,14 @@
         const themeToggle = document.getElementById('themeToggle');
         const copyPrevMonthBtn = document.getElementById('copyPrevMonthBtn');
         const clearMonthBtn = document.getElementById('clearMonthBtn');
+        const addBillBtn = document.getElementById('addBillBtn');
         const canvas = document.getElementById('miniChart');
         const ctx = canvas.getContext('2d');
         
         let debounceTimer;
 
-        // --- ZAKTUALIZOWANA OBSŁUGA MOTYWU (ZAPIS I ODCZYT Z LOCALSTORAGE) ---
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            
-            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-            drawChart(parseFloat(totalPaidSpan.textContent) || 0, parseFloat(totalUnpaidSpan.textContent) || 0);
-        });
-        // --- KONIEC ZMIAN W MOTYWIE ---
+        // Zapobieganie dublowaniu opcji przy ponownym logowaniu
+        monthSelect.innerHTML = '';
 
         const currentYear = new Date().getFullYear();
         const yearsToGenerate = [currentYear, currentYear + 1];
@@ -439,20 +482,14 @@
                     </label>
                 `;
 
-                // BLOKADA USUWANIA PINEM
+                // Usunięcie blokad prompt() na rzecz bezpośredniego zapisu (użytkownik jest już autoryzowany logowaniem)
                 card.querySelector('.delete-btn').addEventListener('click', () => {
-                    if (checkPermission()) removeBillFromCurrentMonth(name);
+                    removeBillFromCurrentMonth(name);
                 });
                 
-                // BLOKADA ZMIANY KWOTY PINEM
                 card.querySelector('.amount-input').addEventListener('input', (e) => {
                     const oldVal = billData.amount || '0.00';
                     const newVal = e.target.value;
-                    
-                    if (!checkPermission()) {
-                        e.target.value = oldVal; // Cofnij zmianę w polu tekstowym
-                        return;
-                    }
 
                     clearTimeout(debounceTimer);
                     debounceTimer = setTimeout(() => {
@@ -461,25 +498,12 @@
                     }, 500); 
                 });
 
-                // BLOKADA CHECKBOXA PINEM
-                card.querySelector('.paid-checkbox').addEventListener('click', (e) => {
-                    if (!checkPermission()) {
-                        e.preventDefault();
-                        return;
-                    }
-                });
-
                 card.querySelector('.paid-checkbox').addEventListener('change', (e) => {
                     togglePaid(billId, e.target.checked);
                     logEvent(`[${getFriendlyMonthName(monthSelect.value)}] Oznaczono rachunek "${name}" jako ${e.target.checked ? 'OPŁACONY' : 'NIEOPŁACONY'}`);
                 });
                 
-                // BLOKADA ZMIANY NAZWY PINEM
                 card.querySelector('.name-input').addEventListener('change', (e) => {
-                    if (!checkPermission()) {
-                        e.target.value = name; // Cofnij zmianę wizualną
-                        return;
-                    }
                     const idx = globalRegisteredBills.findIndex(n => createBillId(n) === billId);
                     updateBillName(idx >= 0 ? idx : globalRegisteredBills.length, name, e.target.value);
                 });
@@ -562,10 +586,7 @@
             calculateTotals();
         }
 
-        // KOPIRZ MIESIĄC Z BLOKADĄ PIN
         copyPrevMonthBtn.addEventListener('click', async () => {
-            if (!checkPermission()) return;
-            
             const currentVal = monthSelect.value;
             const parts = currentVal.split('-');
             let year = parseInt(parts[0]);
@@ -579,7 +600,7 @@
             }
 
             const prevMonthKey = `${year}-${monthIdx}`;
-            if (confirm(`Czy chcesz skopiować wszystkie kafelki, nazwy oraz kwoty z miasta ${months[monthIdx]} ${year}?`)) {
+            if (confirm(`Czy chcesz skopiować wszystkie kafelki, nazwy oraz kwoty z miesiąca ${months[monthIdx]} ${year}?`)) {
                 const prevMonthRef = ref(db, `months_data/${prevMonthKey}`);
                 const snapshot = await get(prevMonthRef);
                 if (snapshot.exists()) {
@@ -593,23 +614,17 @@
             }
         });
 
-        // CZYSZCZENIE MIESIĄCA Z BLOKADĄ PIN
         clearMonthBtn.addEventListener('click', async () => {
-            if (!checkPermission()) return;
-            
             const currentVal = monthSelect.value;
-            if (confirm(`⚠️ CZY NA PEWNO CHCESZ WYCZYŚCIĆ CAŁY MIESIĄC?\n\nSpowoduje to całkowite USUNIĘCIE WSZYSTKICH KAFELKÓW (nazw i kwot) w miesiącu: ${getFriendlyMonthName(currentVal)}.\nEkran będzie całkowicie pusty.`)) {
+            if (confirm(`⚠️ CZY NA PEWNO CHCESZ WYCZYŚCIĆ CAŁY MIESIĄC?\n\nSpowoduje to całkowite USUNIĘCIE WSZYSTKICH KAFELKÓW w miesiącu: ${getFriendlyMonthName(currentVal)}.`)) {
                 const monthDataRef = ref(db, `months_data/${currentVal}`);
                 await set(monthDataRef, null); 
-                logEvent(`[${getFriendlyMonthName(currentVal)}] Całkowicie wyczyszczono miesiąc (usunięto wszystkie kafelki)`);
+                logEvent(`[${getFriendlyMonthName(currentVal)}] Całkowicie wyczyszczono miesiąc`);
                 alert("Miesiąc został całkowicie wyczyszczony!");
             }
         });
 
-        // DODAWANIE Z BLOKADĄ PIN
-        window.addNewBill = function() {
-            if (!checkPermission()) return;
-
+        function addNewBill() {
             const name = newBillNameInput.value.trim();
             if (!name) return;
             
@@ -629,6 +644,8 @@
             logEvent(`[${getFriendlyMonthName(monthSelect.value)}] Dodano nowy rachunek: "${name}"`);
             newBillNameInput.value = '';
         }
+
+        addBillBtn.onclick = addNewBill;
 
         function updateBillName(index, oldName, newName) {
             const cleanedNewName = newName.trim();
@@ -654,7 +671,7 @@
 
         function removeBillFromCurrentMonth(name) {
             const billId = createBillId(name);
-            if (confirm(`Czy usunąć rachunek "${name}" TYLKO z wybranego miasta?`)) {
+            if (confirm(`Czy usunąć rachunek "${name}" TYLKO z wybranego miesiąca?`)) {
                 set(ref(db, `months_data/${monthSelect.value}/${billId}`), null);
                 logEvent(`[${getFriendlyMonthName(monthSelect.value)}] Usunięto kafelek rachunku: "${name}"`);
             }
@@ -672,7 +689,7 @@
             });
         }
 
-        openLogsBtn.addEventListener('click', () => {
+        openLogsBtn.onclick = () => {
             logsModal.style.display = 'flex';
             modalLogBody.innerHTML = '<div style="text-align: center; color: var(--text-muted);">Pobieranie historii z bazy...</div>';
             
@@ -697,29 +714,42 @@
             }).catch(err => {
                 modalLogBody.innerHTML = `<div style="text-align: center; color: #c62828; padding: 20px;">Błąd pobierania logów: ${err.message}</div>`;
             });
-        });
+        };
 
-        closeLogsBtn.addEventListener('click', () => logsModal.style.display = 'none');
-        window.addEventListener('click', (e) => { if (e.target === logsModal) logsModal.style.display = 'none'; });
+        closeLogsBtn.onclick = () => logsModal.style.display = 'none';
+        window.onclick = (e) => { if (e.target === logsModal) logsModal.style.display = 'none'; };
 
-        monthSelect.addEventListener('change', () => {
+        monthSelect.onchange = () => {
             listenToMonthData();
-        });
+        };
         
-        newBillNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewBill(); });
+        newBillNameInput.onkeypress = (e) => { if (e.key === 'Enter') addNewBill(); };
 
-        // --- DODANA BLOKADA PRZYCISKU STATYSTYK PINEM ---
         const statsBtn = document.getElementById('statsBtn');
         if (statsBtn) {
-            statsBtn.addEventListener('click', () => {
-                if (window.checkPermission()) {
-                    window.location.href = 'statystyki.html';
-                }
-            });
+            statsBtn.onclick = () => {
+                window.location.href = 'statystyki.html';
+            };
         }
 
+        // --- OBSŁUGA MOTYWU ---
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        themeToggle.onclick = () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            drawChart(parseFloat(totalPaidSpan.textContent) || 0, parseFloat(totalUnpaidSpan.textContent) || 0);
+        };
+
         listenToMonthData();
-    });
+    }
 </script>
 </body>
 </html>
