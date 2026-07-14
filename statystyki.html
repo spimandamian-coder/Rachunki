@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Moje Rachunki - Panel Statystyk i Historii</title>
+    <!-- Dodanie profesjonalnego fontu Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
         /* PROFESJONALNA PALETA BARW - NATYWNY TRYB CIEMNY */
         :root {
@@ -331,12 +336,10 @@
 
 <script type="module">
     // --- 1. BLOKADA DOSTĘPU (ZABEZPIECZENIE SESJI) ---
-    // Jeśli użytkownik nie jest zalogowany, natychmiast przekierowujemy go do index.html
     if (sessionStorage.getItem("isLoggedIn") !== "true") {
         alert("Brak dostępu! Najpierw zaloguj się na stronie głównej.");
         window.location.replace("index.html");
     } else {
-        // Jeśli jest zalogowany, odkrywamy zawartość strony
         document.getElementById("appContainer").style.display = "block";
     }
 
@@ -368,215 +371,211 @@
         return '💰';
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-        // Bezpiecznik: jeśli niezalogowany, przerywamy wykonywanie dalszego kodu UI
-        if (sessionStorage.getItem("isLoggedIn") !== "true") return;
+    // Usunięto DOMContentLoaded - moduły ładują się automatycznie defer po sparsowaniu DOM
+    const monthSelect = document.getElementById('monthSelect');
+    const statsGrid = document.getElementById('statsGrid');
+    const categoryInput = document.getElementById('expenseCategory');
+    const amountInput = document.getElementById('expenseAmount');
+    const addExpenseBtn = document.getElementById('addExpenseBtn');
+    const grandTotalSpan = document.getElementById('grandTotal');
+    const historyTableBody = document.getElementById('historyTableBody');
+    const tableEmptyState = document.getElementById('tableEmptyState');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-        const monthSelect = document.getElementById('monthSelect');
-        const statsGrid = document.getElementById('statsGrid');
-        const categoryInput = document.getElementById('expenseCategory');
-        const amountInput = document.getElementById('expenseAmount');
-        const addExpenseBtn = document.getElementById('addExpenseBtn');
-        const grandTotalSpan = document.getElementById('grandTotal');
-        const historyTableBody = document.getElementById('historyTableBody');
-        const tableEmptyState = document.getElementById('tableEmptyState');
-        const logoutBtn = document.getElementById('logoutBtn');
+    // Wymuszenie trybu ciemnego
+    document.documentElement.setAttribute('data-theme', 'dark');
 
-        // Wymuszenie trybu ciemnego
-        document.documentElement.setAttribute('data-theme', 'dark');
-
-        // Generowanie listy miesięcy w selektorze
-        const currentYear = new Date().getFullYear();
-        [currentYear - 1, currentYear, currentYear + 1].forEach(year => {
-            months.forEach((month, index) => {
-                let option = document.createElement('option');
-                option.value = `${year}-${index}`;
-                option.textContent = `${month} ${year}`;
-                monthSelect.appendChild(option);
-            });
+    // Generowanie listy miesięcy w selektorze
+    const currentYear = new Date().getFullYear();
+    [currentYear - 1, currentYear, currentYear + 1].forEach(year => {
+        months.forEach((month, index) => {
+            let option = document.createElement('option');
+            option.value = `${year}-${index}`;
+            option.textContent = `${month} ${year}`;
+            monthSelect.appendChild(option);
         });
-        
-        // Ustawienie aktualnego miesiąca jako domyślnego
-        monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
+    });
+    
+    // Ustawienie aktualnego miesiąca jako domyślnego
+    monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
-        // Nasłuchiwanie zmian w bazie Firebase
-        function listenToExpenses() {
-            const path = `daily_expenses/${monthSelect.value}`;
-            const expensesRef = ref(db, path);
-            
-            onValue(expensesRef, (snapshot) => {
-                const data = snapshot.val();
-                renderAllPanels(data);
-            }, (error) => {
-                console.error("Błąd Firebase Realtime Database:", error);
-                alert("Nie udało się pobrać danych. Sprawdź ustawienia bazy Firebase.");
-            });
+    // Nasłuchiwanie zmian w bazie Firebase
+    function listenToExpenses() {
+        const path = `daily_expenses/${monthSelect.value}`;
+        const expensesRef = ref(db, path);
+        
+        onValue(expensesRef, (snapshot) => {
+            const data = snapshot.val();
+            renderAllPanels(data);
+        }, (error) => {
+            console.error("Błąd Firebase Realtime Database:", error);
+            alert("Nie udało się pobrać danych. Sprawdź ustawienia bazy Firebase.");
+        });
+    }
+
+    // Renderowanie danych na stronie
+    function renderAllPanels(data) {
+        statsGrid.innerHTML = '';
+        historyTableBody.innerHTML = '';
+
+        if (!data) {
+            grandTotalSpan.textContent = "0.00";
+            statsGrid.innerHTML = '<div style="color:var(--text-muted); font-style: italic;">Brak wpisów dla tego okresu.</div>';
+            tableEmptyState.style.display = 'block';
+            return;
         }
 
-        // Renderowanie danych na stronie
-        function renderAllPanels(data) {
-            statsGrid.innerHTML = '';
-            historyTableBody.innerHTML = '';
+        tableEmptyState.style.display = 'none';
+        const totals = {};
+        let grandTotal = 0;
+        const historyList = [];
 
-            if (!data) {
-                grandTotalSpan.textContent = "0.00";
-                statsGrid.innerHTML = '<div style="color:var(--text-muted); font-style: italic;">Brak wpisów dla tego okresu.</div>';
-                tableEmptyState.style.display = 'block';
-                return;
+        // Przetwarzanie danych wejściowych
+        Object.keys(data).forEach(id => {
+            const item = data[id];
+            const catName = item.category ? item.category.trim() : "Inne";
+            const amount = parseFloat(item.amount) || 0;
+            
+            let dateStr = "Brak danych";
+            let timeStr = "--:--";
+            if (item.timestamp) {
+                const d = new Date(item.timestamp);
+                if (!isNaN(d.getTime())) {
+                    dateStr = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    timeStr = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                }
             }
 
-            tableEmptyState.style.display = 'none';
-            const totals = {};
-            let grandTotal = 0;
-            const historyList = [];
+            grandTotal += amount;
 
-            // Przetwarzanie danych wejściowych
-            Object.keys(data).forEach(id => {
-                const item = data[id];
-                const catName = item.category ? item.category.trim() : "Inne";
-                const amount = parseFloat(item.amount) || 0;
-                
-                let dateStr = "Brak danych";
-                let timeStr = "--:--";
-                if (item.timestamp) {
-                    const d = new Date(item.timestamp);
-                    if (!isNaN(d.getTime())) {
-                        dateStr = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                        timeStr = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-                    }
-                }
+            // Agregacja na potrzeby podsumowania kategorii
+            if (totals[catName]) {
+                totals[catName].sum += amount;
+                totals[catName].count += 1;
+                totals[catName].ids.push(id); 
+            } else {
+                totals[catName] = { sum: amount, count: 1, ids: [id] };
+            }
 
-                grandTotal += amount;
-
-                // Agregacja na potrzeby podsumowania kategorii
-                if (totals[catName]) {
-                    totals[catName].sum += amount;
-                    totals[catName].count += 1;
-                    totals[catName].ids.push(id); 
-                } else {
-                    totals[catName] = { sum: amount, count: 1, ids: [id] };
-                }
-
-                // Dodawanie do listy historii
-                historyList.push({
-                    id: id,
-                    category: catName,
-                    amount: amount,
-                    date: dateStr,
-                    time: timeStr,
-                    rawTimestamp: item.timestamp || ""
-                });
+            // Dodawanie do listy historii
+            historyList.push({
+                id: id,
+                category: catName,
+                amount: amount,
+                date: dateStr,
+                time: timeStr,
+                rawTimestamp: item.timestamp || ""
             });
+        });
 
-            // Aktualizacja sumy całkowitej
-            grandTotalSpan.textContent = grandTotal.toFixed(2);
+        // Aktualizacja sumy całkowitej
+        grandTotalSpan.textContent = grandTotal.toFixed(2);
 
-            // 1. Renderowanie kart kategorii
-            Object.keys(totals).sort().forEach(catName => {
-                const info = totals[catName];
-                const icon = getCategoryIcon(catName);
-                const card = document.createElement('div');
-                card.className = 'stat-card';
-                
-                card.innerHTML = `
-                    <button class="clear-cat-btn" title="Usuń całą kategorię">🗑️</button>
-                    <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
-                        <span style="font-size: 32px;">${icon}</span>
-                        <div>
-                            <strong style="font-size: 16px; display: block; color:#f1f5f9;">${catName}</strong>
-                            <span style="font-size: 12px; color: var(--text-muted);">Transakcje: ${info.count}</span>
-                        </div>
+        // 1. Renderowanie kart kategorii
+        Object.keys(totals).sort().forEach(catName => {
+            const info = totals[catName];
+            const icon = getCategoryIcon(catName);
+            const card = document.createElement('div');
+            card.className = 'stat-card';
+            
+            card.innerHTML = `
+                <button class="clear-cat-btn" title="Usuń całą kategorię">🗑️</button>
+                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+                    <span style="font-size: 32px;">${icon}</span>
+                    <div>
+                        <strong style="font-size: 16px; display: block; color:#f1f5f9;">${catName}</strong>
+                        <span style="font-size: 12px; color: var(--text-muted);">Transakcje: ${info.count}</span>
                     </div>
-                    <div style="font-size: 24px; font-weight: 800; color: #f43f5e; text-align: right; letter-spacing: -0.01em;">
-                        ${info.sum.toFixed(2)} <span style="font-size: 14px; font-weight:500; color:var(--text-muted)">zł</span>
-                    </div>
-                `;
+                </div>
+                <div style="font-size: 24px; font-weight: 800; color: #f43f5e; text-align: right; letter-spacing: -0.01em;">
+                    ${info.sum.toFixed(2)} <span style="font-size: 14px; font-weight:500; color:var(--text-muted)">zł</span>
+                </div>
+            `;
 
-                // Obsługa usunięcia całej kategorii
-                card.querySelector('.clear-cat-btn').addEventListener('click', () => {
-                    if (confirm(`Czy chcesz usunąć wszystkie wpisy dla kategorii "${catName}"?`)) {
-                        info.ids.forEach(id => {
-                            remove(ref(db, `daily_expenses/${monthSelect.value}/${id}`)).catch(err => {
-                                alert("Błąd usuwania: " + err.message);
-                            });
-                        });
-                    }
-                });
-
-                statsGrid.appendChild(card);
-            });
-
-            // 2. Renderowanie tabeli historii (najnowsze na górze)
-            historyList.sort((a, b) => new Date(b.rawTimestamp) - new Date(a.rawTimestamp));
-
-            historyList.forEach(item => {
-                const tr = document.createElement('tr');
-                const icon = getCategoryIcon(item.category);
-                
-                tr.innerHTML = `
-                    <td style="font-weight: 500;">${item.date}</td>
-                    <td style="color: var(--text-muted);">${item.time}</td>
-                    <td><span style="margin-right:6px;">${icon}</span> <strong>${item.category}</strong></td>
-                    <td style="text-align: right; font-weight: 700; color: #ef4444;">${item.amount.toFixed(2)} zł</td>
-                    <td style="text-align: center;">
-                        <button class="delete-row-btn" title="Usuń ten wpis">❌</button>
-                    </td>
-                `;
-
-                // Obsługa usunięcia pojedynczego wiersza
-                tr.querySelector('.delete-row-btn').addEventListener('click', () => {
-                    if (confirm(`Usunąć wydatek: ${item.category} na kwotę ${item.amount.toFixed(2)} zł?`)) {
-                        remove(ref(db, `daily_expenses/${monthSelect.value}/${item.id}`)).catch(err => {
+            // Obsługa usunięcia całej kategorii
+            card.querySelector('.clear-cat-btn').addEventListener('click', () => {
+                if (confirm(`Czy chcesz usunąć wszystkie wpisy dla kategorii "${catName}"?`)) {
+                    info.ids.forEach(id => {
+                        remove(ref(db, `daily_expenses/${monthSelect.value}/${id}`)).catch(err => {
                             alert("Błąd usuwania: " + err.message);
                         });
-                    }
-                });
-
-                historyTableBody.appendChild(tr);
+                    });
+                }
             });
-        }
 
-        // Dodawanie nowej transakcji do bazy
-        function handleAddExpense() {
-            const category = categoryInput.value.trim();
-            const amount = parseFloat(amountInput.value);
-
-            if (!category || isNaN(amount) || amount <= 0) {
-                alert("Wprowadź prawidłową nazwę oraz kwotę dodatnią!");
-                return;
-            }
-
-            const expensesRef = ref(db, `daily_expenses/${monthSelect.value}`);
-            push(expensesRef, {
-                category: category,
-                amount: amount,
-                timestamp: new Date().toISOString()
-            })
-            .then(() => {
-                categoryInput.value = '';
-                amountInput.value = '';
-                categoryInput.focus();
-            })
-            .catch((error) => {
-                console.error("Błąd zapisu Firebase:", error);
-                alert("Nie udało się zapisać transakcji. Sprawdź, czy reguły bazy na to zezwalają.");
-            });
-        }
-
-        // Obsługa wylogowania
-        logoutBtn.addEventListener('click', () => {
-            sessionStorage.removeItem("isLoggedIn");
-            window.location.replace("index.html");
+            statsGrid.appendChild(card);
         });
 
-        // Obsługa eventów UI
-        addExpenseBtn.addEventListener('click', handleAddExpense);
-        amountInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAddExpense(); });
-        monthSelect.addEventListener('change', listenToExpenses);
+        // 2. Renderowanie tabeli historii (najnowsze na górze)
+        historyList.sort((a, b) => new Date(b.rawTimestamp) - new Date(a.rawTimestamp));
 
-        // Uruchomienie nasłuchu na start
-        listenToExpenses();
+        historyList.forEach(item => {
+            const tr = document.createElement('tr');
+            const icon = getCategoryIcon(item.category);
+            
+            tr.innerHTML = `
+                <td style="font-weight: 500;">${item.date}</td>
+                <td style="color: var(--text-muted);">${item.time}</td>
+                <td><span style="margin-right:6px;">${icon}</span> <strong>${item.category}</strong></td>
+                <td style="text-align: right; font-weight: 700; color: #ef4444;">${item.amount.toFixed(2)} zł</td>
+                <td style="text-align: center;">
+                    <button class="delete-row-btn" title="Usuń ten wpis">❌</button>
+                </td>
+            `;
+
+            // Obsługa usunięcia pojedynczego wiersza
+            tr.querySelector('.delete-row-btn').addEventListener('click', () => {
+                if (confirm(`Usunąć wydatek: ${item.category} na kwotę ${item.amount.toFixed(2)} zł?`)) {
+                    remove(ref(db, `daily_expenses/${monthSelect.value}/${item.id}`)).catch(err => {
+                        alert("Błąd usuwania: " + err.message);
+                    });
+                }
+            });
+
+            historyTableBody.appendChild(tr);
+        });
+    }
+
+    // Dodawanie nowej transakcji do bazy
+    function handleAddExpense() {
+        const category = categoryInput.value.trim();
+        const amount = parseFloat(amountInput.value);
+
+        if (!category || isNaN(amount) || amount <= 0) {
+            alert("Wprowadź prawidłową nazwę oraz kwotę dodatnią!");
+            return;
+        }
+
+        const expensesRef = ref(db, `daily_expenses/${monthSelect.value}`);
+        push(expensesRef, {
+            category: category,
+            amount: amount,
+            timestamp: new Date().toISOString()
+        })
+        .then(() => {
+            categoryInput.value = '';
+            amountInput.value = '';
+            categoryInput.focus();
+        })
+        .catch((error) => {
+            console.error("Błąd zapisu Firebase:", error);
+            alert("Nie udało się zapisać transakcji. Sprawdź, czy reguły bazy na to zezwalają.");
+        });
+    }
+
+    // Obsługa wylogowania
+    logoutBtn.addEventListener('click', () => {
+        sessionStorage.removeItem("isLoggedIn");
+        window.location.replace("index.html");
     });
+
+    // Obsługa eventów UI
+    addExpenseBtn.addEventListener('click', handleAddExpense);
+    amountInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAddExpense(); });
+    monthSelect.addEventListener('change', listenToExpenses);
+
+    // Uruchomienie nasłuchu na start
+    listenToExpenses();
 </script>
 </body>
 </html>
