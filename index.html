@@ -255,6 +255,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, onValue, update, get, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    // DODANY MODUŁ AUTHENTICATION
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -270,7 +271,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const auth = getAuth(app); 
+    const auth = getAuth(app); // Inicjalizacja uwierzytelniania
 
     const defaultBills = [
         "Internet Play", "Woda Tuwima", "Czynsz Tuwima", "Czynsz Armii",
@@ -294,6 +295,7 @@
         return '📄';
     }
 
+    // --- STRUKTURA OBSŁUGI OBSZARÓW WIDOCZNOŚCI ---
     const loginZone = document.getElementById('loginZone');
     const mainContent = document.getElementById('mainContent');
     const loginForm = document.getElementById('loginForm');
@@ -305,10 +307,6 @@
         const pass = document.getElementById('loginPassword').value;
 
         signInWithEmailAndPassword(auth, email, pass)
-            .then((userCredential) => {
-                // Po pomyślnym logowaniu zapisujemy flagę w sessionStorage
-                sessionStorage.setItem("isLoggedIn", "true");
-            })
             .catch(err => {
                 alert("❌ Błąd logowania: Niepoprawny login lub hasło!");
                 console.error(err);
@@ -317,28 +315,24 @@
 
     // Obsługa przycisku Wyloguj
     document.getElementById('logoutBtn').addEventListener('click', () => {
-        signOut(auth).then(() => {
-            // Czyścimy flagę sesji przy wylogowaniu
-            sessionStorage.removeItem("isLoggedIn");
-        });
+        signOut(auth);
     });
 
     // Monitorowanie stanu zalogowania
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            // Na wypadek, gdyby użytkownik był już zalogowany (np. po odświeżeniu strony)
-            sessionStorage.setItem("isLoggedIn", "true");
-            
+            // Zalogowany -> pokaż aplikację, ukryj logowanie
             loginZone.style.display = 'none';
             mainContent.style.display = 'block';
             initDashboard();
         } else {
-            sessionStorage.removeItem("isLoggedIn");
+            // Niezalogowany -> pokaż logowanie, ukryj aplikację
             loginZone.style.display = 'flex';
             mainContent.style.display = 'none';
         }
     });
 
+    // Zamknięcie funkcji w initDashboard, aby uruchamiała się tylko dla autoryzowanego sesyjnie użytkownika
     function initDashboard() {
         const monthSelect = document.getElementById('monthSelect');
         const billsGrid = document.getElementById('billsGrid');
@@ -354,6 +348,7 @@
         
         let debounceTimer;
 
+        // Zapobieganie dublowaniu opcji przy ponownym logowaniu
         monthSelect.innerHTML = '';
 
         const currentYear = new Date().getFullYear();
@@ -487,6 +482,7 @@
                     </label>
                 `;
 
+                // Usunięcie blokad prompt() na rzecz bezpośredniego zapisu (użytkownik jest już autoryzowany logowaniem)
                 card.querySelector('.delete-btn').addEventListener('click', () => {
                     removeBillFromCurrentMonth(name);
                 });
@@ -747,11 +743,11 @@
             
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
+            
             themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-            rebuildGridStructure();
+            drawChart(parseFloat(totalPaidSpan.textContent) || 0, parseFloat(totalUnpaidSpan.textContent) || 0);
         };
 
-        // Nasłuchiwanie bazy od razu po zainicjalizowaniu panelu
         listenToMonthData();
     }
 </script>
