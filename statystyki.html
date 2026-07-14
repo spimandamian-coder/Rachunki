@@ -276,12 +276,11 @@
 </head>
 <body>
 
-<!-- Zmieniono style="display: none;" na style="display: block;" - strona ładuje się od razu -->
-<div id="appContainer" class="container" style="display: block;">
+<!-- Upewniamy się, że kontener jest od razu w 100% widoczny -->
+<div id="appContainer" class="container" style="display: block !important;">
     <div class="header-zone">
         <h1>📊 Panel Statystyk i Analiz</h1>
         <div>
-            <!-- Usunięto przycisk "Wyloguj" -->
             <a href="index.html" class="btn btn-secondary">⬅️ Powrót do Menu</a>
         </div>
     </div>
@@ -335,9 +334,12 @@
     </div>
 </div>
 
-<script type="module">
-    // --- USUNIĘTO BLOKADĘ SESJI (Strona jest od razu otwarta dla każdego) ---
+<!-- Szybki, bezwarunkowy skrypt czyszczący stare blokady w przeglądarce -->
+<script>
+    localStorage.setItem("isLoggedIn", "true");
+</script>
 
+<script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -461,7 +463,7 @@
             });
         });
 
-        /// Aktualizacja sumy całkowitej
+        // Aktualizacja sumy całkowitej
         grandTotalSpan.textContent = grandTotal.toFixed(2);
 
         // 1. Renderowanie kart kategorii
