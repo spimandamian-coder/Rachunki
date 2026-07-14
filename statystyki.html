@@ -322,8 +322,7 @@
                     <th style="text-align: center; width: 60px;">Akcja</th>
                 </tr>
             </thead>
-            <tbody id="historyTableBody">
-                </tbody>
+            <tbody id="historyTableBody"></tbody>
         </table>
         <div id="tableEmptyState" class="empty-state" style="display: none;">Brak operacji zarejestrowanych w tym miesiącu.</div>
     </div>
@@ -346,7 +345,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Gradzień"];
 
     function getCategoryIcon(name) {
         const lower = name.toLowerCase();
@@ -411,7 +410,7 @@
             // Przetwarzanie obiektów z bazy danych
             Object.keys(data).forEach(id => {
                 const item = data[id];
-                const catName = item.category.trim();
+                const catName = item.category ? item.category.trim() : "Inne";
                 const amount = parseFloat(item.amount) || 0;
                 
                 // Parsowanie ISO daty lub przypisanie domyślnej
@@ -484,7 +483,7 @@
             });
 
             // 2. BUDOWANIE CHRONOLOGICZNEJ TABELI (od najnowszych)
-            historyList.sort((a, b) => b.rawTimestamp.localeCompare(a.rawTimestamp));
+            historyList.sort((a, b) => new Date(b.rawTimestamp) - new Date(a.rawTimestamp));
 
             historyList.forEach(item => {
                 const tr = document.createElement('tr');
@@ -537,6 +536,7 @@
         amountInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAddExpense(); });
         monthSelect.addEventListener('change', listenToExpenses);
 
+        // Wywołujemy nasłuchiwanie dopiero po pełnym załadowaniu DOM i zdefiniowaniu funkcji
         listenToExpenses();
     });
 </script>
