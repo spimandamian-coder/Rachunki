@@ -276,11 +276,12 @@
 </head>
 <body>
 
-<div id="appContainer" class="container" style="display: none;">
+<!-- Zmieniono style="display: none;" na style="display: block;" - strona ładuje się od razu -->
+<div id="appContainer" class="container" style="display: block;">
     <div class="header-zone">
         <h1>📊 Panel Statystyk i Analiz</h1>
         <div>
-            <button id="logoutBtn" class="btn btn-secondary" style="margin-right: 10px;">🔓 Wyloguj</button>
+            <!-- Usunięto przycisk "Wyloguj" -->
             <a href="index.html" class="btn btn-secondary">⬅️ Powrót do Menu</a>
         </div>
     </div>
@@ -335,14 +336,7 @@
 </div>
 
 <script type="module">
-    // --- 1. BLOKADA DOSTĘPU (ZABEZPIECZENIE SESJI Z LOCALSTORAGE) ---
-    // Zmienione z sessionStorage na localStorage dla zachowania sesji między kartami
-    if (localStorage.getItem("isLoggedIn") !== "true") {
-        alert("Brak dostępu! Najpierw zaloguj się na stronie głównej.");
-        window.location.replace("index.html");
-    } else {
-        document.getElementById("appContainer").style.display = "block";
-    }
+    // --- USUNIĘTO BLOKADĘ SESJI (Strona jest od razu otwarta dla każdego) ---
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -380,7 +374,6 @@
     const grandTotalSpan = document.getElementById('grandTotal');
     const historyTableBody = document.getElementById('historyTableBody');
     const tableEmptyState = document.getElementById('tableEmptyState');
-    const logoutBtn = document.getElementById('logoutBtn');
 
     // Wymuszenie trybu ciemnego
     document.documentElement.setAttribute('data-theme', 'dark');
@@ -468,7 +461,7 @@
             });
         });
 
-        // Aktualizacja sumy całkowitej
+        /// Aktualizacja sumy całkowitej
         grandTotalSpan.textContent = grandTotal.toFixed(2);
 
         // 1. Renderowanie kart kategorii
@@ -562,12 +555,6 @@
             alert("Nie udało się zapisać transakcji. Sprawdź, czy reguły bazy na to zezwalają.");
         });
     }
-
-    // Obsługa wylogowania (czyści klucz w localStorage)
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem("isLoggedIn");
-        window.location.replace("index.html");
-    });
 
     // Obsługa eventów UI
     addExpenseBtn.addEventListener('click', handleAddExpense);
