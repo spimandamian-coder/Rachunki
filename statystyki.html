@@ -335,8 +335,9 @@
 </div>
 
 <script type="module">
-    // --- 1. BLOKADA DOSTĘPU (ZABEZPIECZENIE SESJI) ---
-    if (sessionStorage.getItem("isLoggedIn") !== "true") {
+    // --- 1. BLOKADA DOSTĘPU (ZABEZPIECZENIE SESJI Z LOCALSTORAGE) ---
+    // Zmienione z sessionStorage na localStorage dla zachowania sesji między kartami
+    if (localStorage.getItem("isLoggedIn") !== "true") {
         alert("Brak dostępu! Najpierw zaloguj się na stronie głównej.");
         window.location.replace("index.html");
     } else {
@@ -371,7 +372,6 @@
         return '💰';
     }
 
-    // Usunięto DOMContentLoaded - moduły ładują się automatycznie defer po sparsowaniu DOM
     const monthSelect = document.getElementById('monthSelect');
     const statsGrid = document.getElementById('statsGrid');
     const categoryInput = document.getElementById('expenseCategory');
@@ -563,9 +563,9 @@
         });
     }
 
-    // Obsługa wylogowania
+    // Obsługa wylogowania (czyści klucz w localStorage)
     logoutBtn.addEventListener('click', () => {
-        sessionStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("isLoggedIn");
         window.location.replace("index.html");
     });
 
