@@ -271,10 +271,11 @@
 </head>
 <body>
 
-<div class="container">
+<div id="appContainer" class="container" style="display: none;">
     <div class="header-zone">
         <h1>📊 Panel Statystyk i Analiz</h1>
         <div>
+            <button id="logoutBtn" class="btn btn-secondary" style="margin-right: 10px;">🔓 Wyloguj</button>
             <a href="index.html" class="btn btn-secondary">⬅️ Powrót do Menu</a>
         </div>
     </div>
@@ -329,6 +330,16 @@
 </div>
 
 <script type="module">
+    // --- 1. BLOKADA DOSTĘPU (ZABEZPIECZENIE SESJI) ---
+    // Jeśli użytkownik nie jest zalogowany, natychmiast przekierowujemy go do index.html
+    if (sessionStorage.getItem("isLoggedIn") !== "true") {
+        alert("Brak dostępu! Najpierw zaloguj się na stronie głównej.");
+        window.location.replace("index.html");
+    } else {
+        // Jeśli jest zalogowany, odkrywamy zawartość strony
+        document.getElementById("appContainer").style.display = "block";
+    }
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -342,11 +353,10 @@
         appId: "1:1024588826825:web:bcba5bb7172aaf9eafa518"
     };
 
-    // Inicjalizacja Firebase natychmiast, bez czekania na DOM
+    // Inicjalizacja Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Poprawiona literówka: "Gradzień" -> "Grudzień"
     const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 
     function getCategoryIcon(name) {
@@ -359,6 +369,9 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+        // Bezpiecznik: jeśli niezalogowany, przerywamy wykonywanie dalszego kodu UI
+        if (sessionStorage.getItem("isLoggedIn") !== "true") return;
+
         const monthSelect = document.getElementById('monthSelect');
         const statsGrid = document.getElementById('statsGrid');
         const categoryInput = document.getElementById('expenseCategory');
@@ -367,6 +380,7 @@
         const grandTotalSpan = document.getElementById('grandTotal');
         const historyTableBody = document.getElementById('historyTableBody');
         const tableEmptyState = document.getElementById('tableEmptyState');
+        const logoutBtn = document.getElementById('logoutBtn');
 
         // Wymuszenie trybu ciemnego
         document.documentElement.setAttribute('data-theme', 'dark');
@@ -381,22 +395,21 @@
                 monthSelect.appendChild(option);
             });
         });
+        
         // Ustawienie aktualnego miesiąca jako domyślnego
         monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
         // Nasłuchiwanie zmian w bazie Firebase
-        let unsubscribe = null;
         function listenToExpenses() {
             const path = `daily_expenses/${monthSelect.value}`;
             const expensesRef = ref(db, path);
             
-            // Rejestracja callbacku
             onValue(expensesRef, (snapshot) => {
                 const data = snapshot.val();
                 renderAllPanels(data);
             }, (error) => {
                 console.error("Błąd Firebase Realtime Database:", error);
-                alert("Nie udało się pobrać danych. Sprawdź zasady bezpieczeństwa (Rules) w konsoli Firebase.");
+                alert("Nie udało się pobrać danych. Sprawdź ustawienia bazy Firebase.");
             });
         }
 
@@ -546,9 +559,15 @@
             })
             .catch((error) => {
                 console.error("Błąd zapisu Firebase:", error);
-                alert("Nie udało się zapisać transakcji. Sprawdź, czy masz włączone uprawnienia zapisu (Rules) w Firebase.");
+                alert("Nie udało się zapisać transakcji. Sprawdź, czy reguły bazy na to zezwalają.");
             });
         }
+
+        // Obsługa wylogowania
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem("isLoggedIn");
+            window.location.replace("index.html");
+        });
 
         // Obsługa eventów UI
         addExpenseBtn.addEventListener('click', handleAddExpense);
