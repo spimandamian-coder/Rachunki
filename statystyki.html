@@ -21,6 +21,8 @@
             --primary-hover: #059669;
             --danger: #ef4444;
             --danger-hover: #dc2626;
+            --warning: #f59e0b;
+            --warning-hover: #d97706;
             --border-color: #334155;
             --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
             --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -100,12 +102,12 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            flex: 1;
+            flex: 2;
             min-width: 200px;
         }
 
         .input-group.short {
-            flex: 0 1 150px;
+            flex: 1;
             min-width: 120px;
         }
 
@@ -149,10 +151,14 @@
             justify-content: center;
             gap: 8px;
             font-family: inherit;
+            height: 46px; /* Ujednolicenie wysokości z inputami */
+            box-sizing: border-box;
         }
 
         .btn-primary { background-color: var(--primary); color: white; }
         .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        .btn-warning { background-color: var(--warning); color: white; }
+        .btn-warning:hover { background-color: var(--warning-hover); transform: translateY(-1px); }
         .btn-secondary { background-color: #334155; color: var(--text-main); border: 1px solid var(--border-color); }
         .btn-secondary:hover { background-color: #475569; }
 
@@ -250,15 +256,30 @@
             background: rgba(255, 255, 255, 0.02);
         }
 
-        .delete-row-btn {
+        .action-btn {
             background: none;
             border: none;
             cursor: pointer;
-            font-size: 16px;
-            color: var(--text-muted);
+            font-size: 15px;
             transition: var(--transition);
-            padding: 4px;
+            padding: 6px;
             border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-row-btn {
+            color: var(--text-muted);
+        }
+
+        .edit-row-btn:hover {
+            color: var(--warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .delete-row-btn {
+            color: var(--text-muted);
         }
 
         .delete-row-btn:hover {
@@ -450,7 +471,11 @@
         </div>
     </div>
 
+    <!-- Zmodyfikowany formularz - dodany wybór daty i identyfikator edycji -->
     <div class="form-box">
+        <!-- Pole pomocnicze przechowujące ID edytowanej transakcji -->
+        <input type="hidden" id="editExpenseId" value="">
+
         <div class="input-group">
             <label>Sklep / Miejsce / Kategoria</label>
             <input type="text" id="expenseCategory" placeholder="np. Biedronka, Lidl, Orlen..." class="input-style">
@@ -459,8 +484,14 @@
             <label>Kwota (zł)</label>
             <input type="number" step="0.01" id="expenseAmount" placeholder="0.00" class="input-style">
         </div>
-        <div>
+        <!-- NOWE POLE: Wybór daty i czasu transakcji -->
+        <div class="input-group short">
+            <label>Data i godzina</label>
+            <input type="datetime-local" id="expenseDate" class="input-style">
+        </div>
+        <div style="display: flex; gap: 8px;">
             <button id="addExpenseBtn" class="btn btn-primary">➕ Dodaj transakcję</button>
+            <button id="cancelEditBtn" class="btn btn-secondary" style="display: none;">Anuluj</button>
         </div>
     </div>
 
@@ -476,7 +507,7 @@
                     <th>Godzina</th>
                     <th>Kategoria / Sklep</th>
                     <th style="text-align: right;">Kwota</th>
-                    <th style="text-align: center; width: 60px;">Akcja</th>
+                    <th style="text-align: center; width: 100px;">Akcja</th>
                 </tr>
             </thead>
             <tbody id="historyTableBody"></tbody>
@@ -485,7 +516,7 @@
     </div>
 </div>
 
-<!-- ONA MODALNA (UKRYTA DOMYŚLNIE) -->
+<!-- OKNA MODALNE (UKRYTA DOMYŚLNIE) -->
 <div id="chartModalOverlay" class="modal-overlay">
     <div class="chart-modal">
         <div class="modal-header">
@@ -510,7 +541,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
@@ -541,7 +572,10 @@
     const statsGrid = document.getElementById('statsGrid');
     const categoryInput = document.getElementById('expenseCategory');
     const amountInput = document.getElementById('expenseAmount');
+    const dateInput = document.getElementById('expenseDate');
     const addExpenseBtn = document.getElementById('addExpenseBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const editExpenseIdInput = document.getElementById('editExpenseId');
     const grandTotalSpan = document.getElementById('grandTotal');
     const historyTableBody = document.getElementById('historyTableBody');
     const tableEmptyState = document.getElementById('tableEmptyState');
@@ -558,6 +592,18 @@
     // Wymuszenie trybu ciemnego
     document.documentElement.setAttribute('data-theme', 'dark');
 
+    // Funkcja pomocnicza: Ustawienie aktualnej daty i godziny w input
+    function setDefaultDateTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        dateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
     // Generowanie listy miesięcy w selektorze
     const currentYear = new Date().getFullYear();
     [currentYear - 1, currentYear, currentYear + 1].forEach(year => {
@@ -571,6 +617,7 @@
     
     // Ustawienie aktualnego miesiąca jako domyślnego
     monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
+    setDefaultDateTime();
 
     // Nasłuchiwanie zmian w bazie Firebase
     function listenToExpenses() {
@@ -761,9 +808,15 @@
                 <td><span style="margin-right:6px;">${icon}</span> <strong>${item.category}</strong></td>
                 <td style="text-align: right; font-weight: 700; color: #ef4444;">${item.amount.toFixed(2)} zł</td>
                 <td style="text-align: center;">
-                    <button class="delete-row-btn" title="Usuń ten wpis">❌</button>
+                    <button class="action-btn edit-row-btn" title="Edytuj ten wpis">✏️</button>
+                    <button class="action-btn delete-row-btn" title="Usuń ten wpis">❌</button>
                 </td>
             `;
+
+            // Obsługa edycji pojedynczego wiersza
+            tr.querySelector('.edit-row-btn').addEventListener('click', () => {
+                setupEditMode(item, data[item.id]);
+            });
 
             // Obsługa usunięcia pojedynczego wiersza
             tr.querySelector('.delete-row-btn').addEventListener('click', () => {
@@ -778,35 +831,129 @@
         });
     }
 
-    // Dodawanie nowej transakcji do bazy
+    // Przygotowanie formularza do trybu edycji
+    function setupEditMode(historyItem, originalFirebaseItem) {
+        // Przełączenie trybu w formularzu
+        editExpenseIdInput.value = historyItem.id;
+        categoryInput.value = historyItem.category;
+        amountInput.value = historyItem.amount;
+
+        // Ustawienie daty z bazy do inputa datetime-local
+        if (originalFirebaseItem.timestamp) {
+            const d = new Date(originalFirebaseItem.timestamp);
+            if (!isNaN(d.getTime())) {
+                const tzoffset = d.getTimezoneOffset() * 60000; // Korekta strefy czasowej
+                const localISOTime = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 16);
+                dateInput.value = localISOTime;
+            }
+        }
+
+        // Zmiana wyglądu i akcji przycisku głównego
+        addExpenseBtn.textContent = "💾 Zapisz zmiany";
+        addExpenseBtn.classList.remove('btn-primary');
+        addExpenseBtn.classList.add('btn-warning');
+        cancelEditBtn.style.display = 'inline-flex';
+        
+        categoryInput.focus();
+        categoryInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Wyjście z trybu edycji / reset formularza
+    function resetForm() {
+        editExpenseIdInput.value = '';
+        categoryInput.value = '';
+        amountInput.value = '';
+        setDefaultDateTime();
+        
+        addExpenseBtn.textContent = "➕ Dodaj transakcję";
+        addExpenseBtn.classList.remove('btn-warning');
+        addExpenseBtn.classList.add('btn-primary');
+        cancelEditBtn.style.display = 'none';
+    }
+
+    // Dodawanie lub aktualizowanie transakcji w bazie
     function handleAddExpense() {
         const category = categoryInput.value.trim();
         const amount = parseFloat(amountInput.value);
+        const selectedDate = new Date(dateInput.value);
 
         if (!category || isNaN(amount) || amount <= 0) {
             alert("Wprowadź prawidłową nazwę oraz kwotę dodatnią!");
             return;
         }
 
-        const expensesRef = ref(db, `daily_expenses/${monthSelect.value}`);
-        push(expensesRef, {
+        if (isNaN(selectedDate.getTime())) {
+            alert("Wprowadź prawidłową datę!");
+            return;
+        }
+
+        const editId = editExpenseIdInput.value;
+        const timestampIso = selectedDate.toISOString();
+
+        // Określamy klucz bazy (rok i miesiąc) na podstawie wybranej w kalendarzu daty, 
+        // tak aby zapis trafił do odpowiedniego miesiąca analizy (np. jak wybierzesz 1 lipca, zapisze się w lipcu)
+        const targetYear = selectedDate.getFullYear();
+        const targetMonthIndex = selectedDate.getMonth();
+        const targetPeriod = `${targetYear}-${targetMonthIndex}`;
+
+        // Jeśli edytujemy, a użytkownik zmienił miesiąc transakcji, musimy usunąć stary wpis 
+        // z pierwotnego okresu i zapisać go w nowym okresie.
+        const currentPeriod = monthSelect.value;
+
+        const expenseData = {
             category: category,
             amount: amount,
-            timestamp: new Date().toISOString()
-        })
-        .then(() => {
-            categoryInput.value = '';
-            amountInput.value = '';
-            categoryInput.focus();
-        })
-        .catch((error) => {
-            console.error("Błąd zapisu Firebase:", error);
-            alert("Nie udało się zapisać transakcji. Sprawdź, czy reguły bazy na to zezwalają.");
-        });
+            timestamp: timestampIso
+        };
+
+        if (editId) {
+            // Edycja istniejącego wpisu
+            if (currentPeriod !== targetPeriod) {
+                // Sytuacja: Edytowana transakcja zmienia miesiąc (np. z sierpnia na lipiec)
+                // 1. Usuń ze starego okresu w Firebase
+                remove(ref(db, `daily_expenses/${currentPeriod}/${editId}`))
+                .then(() => {
+                    // 2. Dodaj do nowego okresu (jako nowy rekord z nowym ID lub zachowując stare ID)
+                    return set(ref(db, `daily_expenses/${targetPeriod}/${editId}`), expenseData);
+                })
+                .then(() => {
+                    // Zmień widok listy na ten okres, do którego przenieśliśmy transakcję
+                    monthSelect.value = targetPeriod;
+                    listenToExpenses();
+                    resetForm();
+                })
+                .catch(err => alert("Błąd przenoszenia transakcji: " + err.message));
+            } else {
+                // Zwykła aktualizacja w obrębie tego samego okresu
+                set(ref(db, `daily_expenses/${currentPeriod}/${editId}`), expenseData)
+                .then(() => {
+                    resetForm();
+                })
+                .catch(err => alert("Błąd zapisu zmian: " + err.message));
+            }
+        } else {
+            // Dodawanie nowego wpisu
+            const expensesRef = ref(db, `daily_expenses/${targetPeriod}`);
+            push(expensesRef, expenseData)
+            .then(() => {
+                // Jeśli dodaliśmy wpis do innego miesiąca niż aktualnie przeglądany,
+                // przełączamy selektor na ten miesiąc, aby użytkownik widział swój wpis
+                if (currentPeriod !== targetPeriod) {
+                    monthSelect.value = targetPeriod;
+                    listenToExpenses();
+                }
+                resetForm();
+            })
+            .catch((error) => {
+                console.error("Błąd zapisu Firebase:", error);
+                alert("Nie udało się zapisać transakcji. Sprawdź połączenie lub uprawnienia.");
+            });
+        }
     }
 
     // Obsługa eventów UI
     addExpenseBtn.addEventListener('click', handleAddExpense);
+    cancelEditBtn.addEventListener('click', resetForm);
     amountInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAddExpense(); });
     monthSelect.addEventListener('change', listenToExpenses);
 
