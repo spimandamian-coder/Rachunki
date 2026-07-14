@@ -342,10 +342,12 @@
         appId: "1:1024588826825:web:bcba5bb7172aaf9eafa518"
     };
 
+    // Inicjalizacja Firebase natychmiast, bez czekania na DOM
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Gradzień"];
+    // Poprawiona literówka: "Gradzień" -> "Grudzień"
+    const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 
     function getCategoryIcon(name) {
         const lower = name.toLowerCase();
@@ -366,12 +368,12 @@
         const historyTableBody = document.getElementById('historyTableBody');
         const tableEmptyState = document.getElementById('tableEmptyState');
 
-        // NATYWNE WYMUSZENIE REKURENCYJNEGO ATOMOWEGO TRYBU CIEMNEGO
+        // Wymuszenie trybu ciemnego
         document.documentElement.setAttribute('data-theme', 'dark');
 
-        // Generowanie listy miesięcy
+        // Generowanie listy miesięcy w selektorze
         const currentYear = new Date().getFullYear();
-        [currentYear, currentYear + 1].forEach(year => {
+        [currentYear - 1, currentYear, currentYear + 1].forEach(year => {
             months.forEach((month, index) => {
                 let option = document.createElement('option');
                 option.value = `${year}-${index}`;
@@ -379,18 +381,26 @@
                 monthSelect.appendChild(option);
             });
         });
+        // Ustawienie aktualnego miesiąca jako domyślnego
         monthSelect.value = `${currentYear}-${new Date().getMonth()}`;
 
-        // Główny nasłuch zmian z bazy danych
+        // Nasłuchiwanie zmian w bazie Firebase
+        let unsubscribe = null;
         function listenToExpenses() {
-            const expensesRef = ref(db, `daily_expenses/${monthSelect.value}`);
+            const path = `daily_expenses/${monthSelect.value}`;
+            const expensesRef = ref(db, path);
+            
+            // Rejestracja callbacku
             onValue(expensesRef, (snapshot) => {
                 const data = snapshot.val();
                 renderAllPanels(data);
+            }, (error) => {
+                console.error("Błąd Firebase Realtime Database:", error);
+                alert("Nie udało się pobrać danych. Sprawdź zasady bezpieczeństwa (Rules) w konsoli Firebase.");
             });
         }
 
-        // Renderowanie kafelków statystyk oraz tabeli historii transakcji
+        // Renderowanie danych na stronie
         function renderAllPanels(data) {
             statsGrid.innerHTML = '';
             historyTableBody.innerHTML = '';
@@ -407,13 +417,12 @@
             let grandTotal = 0;
             const historyList = [];
 
-            // Przetwarzanie obiektów z bazy danych
+            // Przetwarzanie danych wejściowych
             Object.keys(data).forEach(id => {
                 const item = data[id];
                 const catName = item.category ? item.category.trim() : "Inne";
                 const amount = parseFloat(item.amount) || 0;
                 
-                // Parsowanie ISO daty lub przypisanie domyślnej
                 let dateStr = "Brak danych";
                 let timeStr = "--:--";
                 if (item.timestamp) {
@@ -426,7 +435,7 @@
 
                 grandTotal += amount;
 
-                // Agregacja dla kafelków
+                // Agregacja na potrzeby podsumowania kategorii
                 if (totals[catName]) {
                     totals[catName].sum += amount;
                     totals[catName].count += 1;
@@ -435,7 +444,7 @@
                     totals[catName] = { sum: amount, count: 1, ids: [id] };
                 }
 
-                // Lista do tabeli historycznej
+                // Dodawanie do listy historii
                 historyList.push({
                     id: id,
                     category: catName,
@@ -446,10 +455,10 @@
                 });
             });
 
-            // Aktualizacja sumy głównej
+            // Aktualizacja sumy całkowitej
             grandTotalSpan.textContent = grandTotal.toFixed(2);
 
-            // 1. BUDOWANIE KAFELKÓW STATYSTYCZNYCH
+            // 1. Renderowanie kart kategorii
             Object.keys(totals).sort().forEach(catName => {
                 const info = totals[catName];
                 const icon = getCategoryIcon(catName);
@@ -470,11 +479,13 @@
                     </div>
                 `;
 
-                // Usuwanie całej kategorii
+                // Obsługa usunięcia całej kategorii
                 card.querySelector('.clear-cat-btn').addEventListener('click', () => {
-                    if (confirm(`Czy chcesz usunąć absolutnie wszystkie wpisy dla kategorii "${catName}"?`)) {
+                    if (confirm(`Czy chcesz usunąć wszystkie wpisy dla kategorii "${catName}"?`)) {
                         info.ids.forEach(id => {
-                            remove(ref(db, `daily_expenses/${monthSelect.value}/${id}`));
+                            remove(ref(db, `daily_expenses/${monthSelect.value}/${id}`)).catch(err => {
+                                alert("Błąd usuwania: " + err.message);
+                            });
                         });
                     }
                 });
@@ -482,7 +493,7 @@
                 statsGrid.appendChild(card);
             });
 
-            // 2. BUDOWANIE CHRONOLOGICZNEJ TABELI (od najnowszych)
+            // 2. Renderowanie tabeli historii (najnowsze na górze)
             historyList.sort((a, b) => new Date(b.rawTimestamp) - new Date(a.rawTimestamp));
 
             historyList.forEach(item => {
@@ -499,10 +510,12 @@
                     </td>
                 `;
 
-                // Usuwanie pojedynczego wiersza z bazy danych
+                // Obsługa usunięcia pojedynczego wiersza
                 tr.querySelector('.delete-row-btn').addEventListener('click', () => {
                     if (confirm(`Usunąć wydatek: ${item.category} na kwotę ${item.amount.toFixed(2)} zł?`)) {
-                        remove(ref(db, `daily_expenses/${monthSelect.value}/${item.id}`));
+                        remove(ref(db, `daily_expenses/${monthSelect.value}/${item.id}`)).catch(err => {
+                            alert("Błąd usuwania: " + err.message);
+                        });
                     }
                 });
 
@@ -510,13 +523,13 @@
             });
         }
 
-        // Akcja dodawania wpisu z zapisem timestampu (data + godzina)
+        // Dodawanie nowej transakcji do bazy
         function handleAddExpense() {
             const category = categoryInput.value.trim();
             const amount = parseFloat(amountInput.value);
 
             if (!category || isNaN(amount) || amount <= 0) {
-                alert("Wprowadź prawidłową nazwę oraz kwotę!");
+                alert("Wprowadź prawidłową nazwę oraz kwotę dodatnią!");
                 return;
             }
 
@@ -524,19 +537,25 @@
             push(expensesRef, {
                 category: category,
                 amount: amount,
-                timestamp: new Date().toISOString() // Generuje kompletną datę i godzinę
-            }).then(() => {
+                timestamp: new Date().toISOString()
+            })
+            .then(() => {
                 categoryInput.value = '';
                 amountInput.value = '';
                 categoryInput.focus();
+            })
+            .catch((error) => {
+                console.error("Błąd zapisu Firebase:", error);
+                alert("Nie udało się zapisać transakcji. Sprawdź, czy masz włączone uprawnienia zapisu (Rules) w Firebase.");
             });
         }
 
+        // Obsługa eventów UI
         addExpenseBtn.addEventListener('click', handleAddExpense);
         amountInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAddExpense(); });
         monthSelect.addEventListener('change', listenToExpenses);
 
-        // Wywołujemy nasłuchiwanie dopiero po pełnym załadowaniu DOM i zdefiniowaniu funkcji
+        // Uruchomienie nasłuchu na start
         listenToExpenses();
     });
 </script>
