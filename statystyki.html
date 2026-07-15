@@ -182,30 +182,29 @@
         }
 
         .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 22px;
             position: relative;
             box-shadow: var(--shadow);
             transition: var(--transition);
             overflow: hidden;
+            border: 1px solid var(--border-color);
         }
 
         .stat-card:hover {
             transform: translateY(-4px);
-            border-color: #475569;
+            filter: brightness(1.15);
         }
 
         .clear-cat-btn {
             position: absolute;
             top: 16px;
             right: 16px;
-            background: rgba(239, 68, 68, 0.1);
+            background: rgba(239, 68, 68, 0.15);
             border: none;
             font-size: 14px;
             cursor: pointer;
-            color: var(--danger);
+            color: #fca3a3;
             padding: 6px;
             border-radius: 8px;
             transition: var(--transition);
@@ -245,7 +244,7 @@
 
         .history-table td {
             padding: 16px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             color: #e2e8f0;
         }
 
@@ -253,13 +252,17 @@
             border-bottom: none;
         }
 
-        .history-table tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
+        .history-table tr {
+            transition: var(--transition);
+        }
+
+        .history-table tr:hover {
+            filter: brightness(1.2);
         }
 
         .action-btn {
-            background: none;
-            border: none;
+            background: rgba(15, 23, 42, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             cursor: pointer;
             font-size: 15px;
             transition: var(--transition);
@@ -270,11 +273,11 @@
             justify-content: center;
         }
 
-        .edit-row-btn { color: var(--text-muted); }
-        .edit-row-btn:hover { color: var(--warning); background: rgba(245, 158, 11, 0.1); }
+        .edit-row-btn { color: #fef08a; }
+        .edit-row-btn:hover { color: var(--warning); background: rgba(245, 158, 11, 0.2); }
 
-        .delete-row-btn { color: var(--text-muted); }
-        .delete-row-btn:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+        .delete-row-btn { color: #fca5a5; }
+        .delete-row-btn:hover { color: var(--danger); background: rgba(239, 68, 68, 0.2); }
 
         .empty-state {
             color: var(--text-muted);
@@ -423,7 +426,6 @@
 
         .chart-bar {
             width: 100%;
-            background: linear-gradient(to top, #059669, #10b981);
             border-radius: 4px 4px 0 0;
             min-height: 2px;
             position: relative;
@@ -431,7 +433,7 @@
             cursor: pointer;
         }
 
-        .chart-bar:hover { background: linear-gradient(to top, #10b981, #34d399); }
+        .chart-bar:hover { filter: brightness(1.2); }
 
         .bar-tooltip {
             position: absolute;
@@ -601,6 +603,36 @@
         return '💰';
     }
 
+    // Generator unikalnego i czytelnego koloru HSL na podstawie nazwy kategorii
+    function getCategoryColor(name, alpha = 1) {
+        let hash = 0;
+        const text = name.trim().toLowerCase();
+        for (let i = 0; i < text.length; i++) {
+            hash = text.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        // Używamy zdefiniowanego zakresu barw (odcienie H), nasycenia 65% oraz jasności 22% dla ładnego, ciemnego tła pasującego do trybu dark mode
+        const h = Math.abs(hash) % 360;
+        return `hsla(${h}, 65%, 22%, ${alpha})`;
+    }
+
+    // Generator jasnego koloru obramowania dla wybranej kategorii
+    function getCategoryBorderColor(name) {
+        let hash = 0;
+        const text = name.trim().toLowerCase();
+        for (let i = 0; i < text.length; i++) {
+            hash = text.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const h = Math.abs(hash) % 360;
+        return `hsla(${h}, 75%, 45%, 0.6)`;
+    }
+
+    // Generator koloru dla poszczególnych dni na wykresie
+    function getDayColor(day, alpha = 1) {
+        // Generowanie koloru na podstawie numeru dnia miesiąca (różne dni mają różne odcienie)
+        const h = (day * 12) % 360;
+        return `hsla(${h}, 70%, 40%, ${alpha})`;
+    }
+
     const monthSelect = document.getElementById('monthSelect');
     const statsGrid = document.getElementById('statsGrid');
     const categoryInput = document.getElementById('expenseCategory');
@@ -757,8 +789,11 @@
             const column = document.createElement('div');
             column.className = 'chart-column';
 
+            const startColor = getDayColor(day, 0.9);
+            const endColor = getDayColor(day, 0.5);
+
             column.innerHTML = `
-                <div class="chart-bar" style="height: ${Math.max(percentageHeight, 4)}%;">
+                <div class="chart-bar" style="height: ${Math.max(percentageHeight, 4)}%; background: linear-gradient(to top, ${startColor}, ${endColor});">
                     <div class="bar-tooltip">${sum.toFixed(2)} zł</div>
                 </div>
                 <div class="chart-label">${day < 10 ? '0' + day : day}</div>
@@ -842,6 +877,12 @@
             const card = document.createElement('div');
             card.className = 'stat-card';
             
+            // Dynamiczne tło oraz obramowanie dla każdego kafelka na podstawie kategorii
+            const catBg = getCategoryColor(catName, 0.4);
+            const catBorder = getCategoryBorderColor(catName);
+            card.style.backgroundColor = catBg;
+            card.style.borderColor = catBorder;
+            
             card.innerHTML = `
                 <button class="clear-cat-btn" title="Usuń całą kategorię">🗑️</button>
                 <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
@@ -851,7 +892,7 @@
                         <span style="font-size: 12px; color: var(--text-muted);">Transakcje: ${info.count}</span>
                     </div>
                 </div>
-                <div style="font-size: 24px; font-weight: 800; color: #f43f5e; text-align: right; letter-spacing: -0.01em;">
+                <div style="font-size: 24px; font-weight: 800; color: #f8fafc; text-align: right; letter-spacing: -0.01em;">
                     ${info.sum.toFixed(2)} <span style="font-size: 14px; font-weight:500; color:var(--text-muted)">zł</span>
                 </div>
             `;
@@ -880,11 +921,15 @@
             const tr = document.createElement('tr');
             const icon = getCategoryIcon(item.category);
             
+            // Przypisanie unikalnego, delikatnego tła dla każdego wiersza transakcji na podstawie jej kategorii
+            const rowBg = getCategoryColor(item.category, 0.15);
+            tr.style.backgroundColor = rowBg;
+            
             tr.innerHTML = `
                 <td style="font-weight: 500;">${item.date}</td>
                 <td style="color: var(--text-muted);">${item.time}</td>
                 <td><span style="margin-right:6px;">${icon}</span> <strong>${item.category}</strong></td>
-                <td style="text-align: right; font-weight: 700; color: #ef4444;">${item.amount.toFixed(2)} zł</td>
+                <td style="text-align: right; font-weight: 700; color: #f43f5e;">${item.amount.toFixed(2)} zł</td>
                 <td style="text-align: center;">
                     <button class="action-btn edit-row-btn" title="Edytuj ten wpis">✏️</button>
                     <button class="action-btn delete-row-btn" title="Usuń ten wpis">❌</button>
