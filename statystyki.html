@@ -328,7 +328,7 @@
         .log-item.log-delete { border-left-color: var(--danger); color: #fca5a5; }
         .log-item.log-error { border-left-color: #f97316; color: #fed7aa; }
 
-        /* --- NOWE STYLE DLA MODALA I WYKRESU --- */
+        /* --- STYLE DLA MODALA I WYKRESU --- */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -538,7 +538,7 @@
         <div id="tableEmptyState" class="empty-state" style="display: none;">Brak operacji zarejestrowanych w tym miesiącu.</div>
     </div>
 
-    <!-- NOWA SEKCJA: HISTORIA ZMIAN (LOGI) -->
+    <!-- KONSOLA LOGÓW -->
     <div class="logs-container">
         <div class="logs-header">
             <span style="font-weight: 700; font-size: 14px; color: #34d399; display: flex; align-items: center; gap: 8px;">
@@ -603,34 +603,27 @@
         return '💰';
     }
 
-    // Generator unikalnego i czytelnego koloru HSL na podstawie nazwy kategorii
+    // Stabilny generator unikalnego koloru HSL na podstawie nazwy kategorii
     function getCategoryColor(name, alpha = 1) {
         let hash = 0;
         const text = name.trim().toLowerCase();
         for (let i = 0; i < text.length; i++) {
             hash = text.charCodeAt(i) + ((hash << 5) - hash);
         }
-        // Używamy zdefiniowanego zakresu barw (odcienie H), nasycenia 65% oraz jasności 22% dla ładnego, ciemnego tła pasującego do trybu dark mode
         const h = Math.abs(hash) % 360;
+        // Saturation 65%, Lightness 22% - gwarantuje dobre, nasycone, ale ciemne tło pod biały tekst
         return `hsla(${h}, 65%, 22%, ${alpha})`;
     }
 
-    // Generator jasnego koloru obramowania dla wybranej kategorii
-    function getCategoryBorderColor(name) {
+    // Dynamiczne obramowanie dla kategorii (nieco jaśniejsze i bardziej nasycone)
+    function getCategoryBorderColor(name, alpha = 1) {
         let hash = 0;
         const text = name.trim().toLowerCase();
         for (let i = 0; i < text.length; i++) {
             hash = text.charCodeAt(i) + ((hash << 5) - hash);
         }
         const h = Math.abs(hash) % 360;
-        return `hsla(${h}, 75%, 45%, 0.6)`;
-    }
-
-    // Generator koloru dla poszczególnych dni na wykresie
-    function getDayColor(day, alpha = 1) {
-        // Generowanie koloru na podstawie numeru dnia miesiąca (różne dni mają różne odcienie)
-        const h = (day * 12) % 360;
-        return `hsla(${h}, 70%, 40%, ${alpha})`;
+        return `hsla(${h}, 75%, 45%, ${alpha})`;
     }
 
     const monthSelect = document.getElementById('monthSelect');
@@ -645,7 +638,7 @@
     const historyTableBody = document.getElementById('historyTableBody');
     const tableEmptyState = document.getElementById('tableEmptyState');
     
-    // Nowe elementy konsoli logów
+    // Elementy konsoli logów
     const logsList = document.getElementById('logsList');
     const clearLogsBtn = document.getElementById('clearLogsBtn');
 
@@ -687,7 +680,7 @@
     function logAction(type, message) {
         const logsRef = ref(db, 'system_logs');
         push(logsRef, {
-            type: type, // 'add', 'edit', 'delete', 'error'
+            type: type,
             message: message,
             timestamp: new Date().toISOString()
         }).catch(err => console.error("Błąd podczas zapisywania logu:", err));
@@ -704,7 +697,6 @@
                 return;
             }
 
-            // Wyświetlamy logi od najnowszych na górze
             const sortedLogs = Object.keys(data)
                 .map(id => ({ id, ...data[id] }))
                 .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -745,9 +737,9 @@
             currentPeriodData = data;
             renderAllPanels(data);
         }, (error) => {
-            console.error("Błąd Firebase Realtime Database:", error);
+            console.error("Błąd Realtime Database:", error);
             logAction('error', `Nie udało się pobrać danych dla okresu ${monthSelect.value}. Błąd: ${error.message}`);
-            alert("Nie udało się pobrać danych. Sprawdź ustawienia bazy Firebase.");
+            alert("Nie udało się pobrać danych.");
         });
     }
 
@@ -761,6 +753,7 @@
         }
 
         const dailyTotals = {};
+        // Zbieramy informacje o sumach dziennych oraz kategoriach, które wystąpiły danego dnia
         Object.keys(data).forEach(id => {
             const item = data[id];
             if (item.timestamp) {
@@ -768,7 +761,13 @@
                 if (!isNaN(d.getTime())) {
                     const day = d.getDate();
                     const amount = parseFloat(item.amount) || 0;
-                    dailyTotals[day] = (dailyTotals[day] || 0) + amount;
+                    const category = item.category ? item.category.trim() : "Inne";
+                    
+                    if (!dailyTotals[day]) {
+                        dailyTotals[day] = { sum: 0, categories: new Set() };
+                    }
+                    dailyTotals[day].sum += amount;
+                    dailyTotals[day].categories.add(category);
                 }
             }
         });
@@ -780,20 +779,38 @@
             return;
         }
 
-        const maxAmount = Math.max(...Object.values(dailyTotals));
+        const maxAmount = Math.max(...Object.values(dailyTotals).map(d => d.sum));
 
         activeDays.forEach(day => {
-            const sum = dailyTotals[day];
+            const dayData = dailyTotals[day];
+            const sum = dayData.sum;
             const percentageHeight = maxAmount > 0 ? (sum / maxAmount) * 100 : 0;
 
             const column = document.createElement('div');
             column.className = 'chart-column';
 
-            const startColor = getDayColor(day, 0.9);
-            const endColor = getDayColor(day, 0.5);
+            // GENEROWANIE KOLORU SŁUPKA:
+            // Jeśli danego dnia była jedna kategoria (np. "Allegro"), bierzemy jej kolor.
+            // Jeśli było ich więcej, tworzymy płynny gradient z kolorów tych kategorii!
+            const categoriesArr = Array.from(dayData.categories);
+            let barBackgroundStyle = "";
+
+            if (categoriesArr.length === 1) {
+                const singleColor = getCategoryBorderColor(categoriesArr[0], 0.85);
+                barBackgroundStyle = singleColor;
+            } else if (categoriesArr.length > 1) {
+                const gradientStops = categoriesArr.map((cat, idx) => {
+                    const color = getCategoryBorderColor(cat, 0.9);
+                    const percentage = Math.round((idx / (categoriesArr.length - 1)) * 100);
+                    return `${color} ${percentage}%`;
+                }).join(", ");
+                barBackgroundStyle = `linear-gradient(to top, ${gradientStops})`;
+            } else {
+                barBackgroundStyle = "var(--primary)";
+            }
 
             column.innerHTML = `
-                <div class="chart-bar" style="height: ${Math.max(percentageHeight, 4)}%; background: linear-gradient(to top, ${startColor}, ${endColor});">
+                <div class="chart-bar" style="height: ${Math.max(percentageHeight, 4)}%; background: ${barBackgroundStyle};">
                     <div class="bar-tooltip">${sum.toFixed(2)} zł</div>
                 </div>
                 <div class="chart-label">${day < 10 ? '0' + day : day}</div>
@@ -877,9 +894,9 @@
             const card = document.createElement('div');
             card.className = 'stat-card';
             
-            // Dynamiczne tło oraz obramowanie dla każdego kafelka na podstawie kategorii
+            // Dynamiczne tło i ramka kafelka kategorii na podstawie nazwy
             const catBg = getCategoryColor(catName, 0.4);
-            const catBorder = getCategoryBorderColor(catName);
+            const catBorder = getCategoryBorderColor(catName, 0.7);
             card.style.backgroundColor = catBg;
             card.style.borderColor = catBorder;
             
@@ -921,7 +938,7 @@
             const tr = document.createElement('tr');
             const icon = getCategoryIcon(item.category);
             
-            // Przypisanie unikalnego, delikatnego tła dla każdego wiersza transakcji na podstawie jej kategorii
+            // Unikalne, stonowane tło wiersza w historii transakcji (na podstawie nazwy kategorii)
             const rowBg = getCategoryColor(item.category, 0.15);
             tr.style.backgroundColor = rowBg;
             
@@ -1079,9 +1096,9 @@
     amountInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAddExpense(); });
     monthSelect.addEventListener('change', listenToExpenses);
 
-    // Inicjalizacja nasłuchu na start
+    // Inicjalizacja
     listenToExpenses();
-    listenToLogs(); // Nasłuchiwanie logów
+    listenToLogs();
 </script>
 </body>
 </html>
