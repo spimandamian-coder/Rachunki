@@ -577,6 +577,8 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, push, set, remove, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    // 1. IMPORT MODUŁU AUTH
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB4XJj7CMAfeLaWgSPAb-QOW7AmzCuOIjg",
@@ -591,6 +593,8 @@
     // Inicjalizacja Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    // 2. INICJALIZACJA AUTH
+    const auth = getAuth(app);
 
     const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 
@@ -611,7 +615,6 @@
             hash = text.charCodeAt(i) + ((hash << 5) - hash);
         }
         const h = Math.abs(hash) % 360;
-        // Saturation 65%, Lightness 22% - gwarantuje dobre, nasycone, ale ciemne tło pod biały tekst
         return `hsla(${h}, 65%, 22%, ${alpha})`;
     }
 
@@ -753,7 +756,6 @@
         }
 
         const dailyTotals = {};
-        // Zbieramy informacje o sumach dziennych oraz kategoriach, które wystąpiły danego dnia
         Object.keys(data).forEach(id => {
             const item = data[id];
             if (item.timestamp) {
@@ -789,9 +791,6 @@
             const column = document.createElement('div');
             column.className = 'chart-column';
 
-            // GENEROWANIE KOLORU SŁUPKA:
-            // Jeśli danego dnia była jedna kategoria (np. "Allegro"), bierzemy jej kolor.
-            // Jeśli było ich więcej, tworzymy płynny gradient z kolorów tych kategorii!
             const categoriesArr = Array.from(dayData.categories);
             let barBackgroundStyle = "";
 
@@ -894,7 +893,6 @@
             const card = document.createElement('div');
             card.className = 'stat-card';
             
-            // Dynamiczne tło i ramka kafelka kategorii na podstawie nazwy
             const catBg = getCategoryColor(catName, 0.4);
             const catBorder = getCategoryBorderColor(catName, 0.7);
             card.style.backgroundColor = catBg;
@@ -938,7 +936,6 @@
             const tr = document.createElement('tr');
             const icon = getCategoryIcon(item.category);
             
-            // Unikalne, stonowane tło wiersza w historii transakcji (na podstawie nazwy kategorii)
             const rowBg = getCategoryColor(item.category, 0.15);
             tr.style.backgroundColor = rowBg;
             
@@ -1044,7 +1041,6 @@
         };
 
         if (editId) {
-            // EDYCJA
             if (currentPeriod !== targetPeriod) {
                 remove(ref(db, `daily_expenses/${currentPeriod}/${editId}`))
                 .then(() => {
@@ -1072,7 +1068,6 @@
                 });
             }
         } else {
-            // DODAWANIE NOWEGO WPISU
             const expensesRef = ref(db, `daily_expenses/${targetPeriod}`);
             push(expensesRef, expenseData)
             .then(() => {
@@ -1096,9 +1091,18 @@
     amountInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleAddExpense(); });
     monthSelect.addEventListener('change', listenToExpenses);
 
-    // Inicjalizacja
-    listenToExpenses();
-    listenToLogs();
+    // --- 3. PROCES LOGOWANIA PRZED URUCHOMIENIEM BAZY ---
+    signInAnonymously(auth)
+        .then(() => {
+            console.log("Zalogowano pomyślnie w Firebase Auth (anonimowo)!");
+            // Inicjalizacja bazy i logów dopiero po poprawnym uwierzytelnieniu
+            listenToExpenses();
+            listenToLogs();
+        })
+        .catch((error) => {
+            console.error("Błąd autoryzacji Firebase Auth:", error);
+            alert("Błąd autoryzacji aplikacji. Sprawdź, czy masz włączone logowanie anonimowe w konsoli Firebase.");
+        });
 </script>
 </body>
 </html>
